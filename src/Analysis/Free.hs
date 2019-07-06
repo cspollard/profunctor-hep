@@ -7,6 +7,7 @@ import Data.Profunctor
 import Data.Profunctor.Traversing
 
 
+
 data Free p a b where
   Id :: Free p a a
   Arr :: (a -> b) -> Free p a b
