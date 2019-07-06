@@ -1,8 +1,7 @@
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ConstraintKinds #-}
 
 
 module Analysis.Constrained where
 
 
-newtype C2 c c' p = C2 { runC2 :: forall x y. (c x, c' y) => p x y }
+data C2 c c' p a b = (c a, c' b) => C2 { runC2 :: p a b }
