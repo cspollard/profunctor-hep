@@ -2,7 +2,7 @@
 
 module Analysis.Build where
 
-import Analysis.Internal.Union
+import Analysis.Union
 import Data.Profunctor ((:->))
 import Analysis.Const
 
