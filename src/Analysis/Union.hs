@@ -108,8 +108,8 @@ sumU = decomp >>> either L2 R2
 {-# INLINE sumU #-}
 
 
-runU :: Member arr' arrs => (arr :-> arr') -> U (arr ': arrs) :-> U arrs
-runU nat = sumU >>> sumI id (nat >>> inj)
+runU :: (arr :-> U arrs) -> U (arr ': arrs) :-> U arrs
+runU nat = sumU >>> sumI id nat
 {-# INLINE runU #-}
 
 

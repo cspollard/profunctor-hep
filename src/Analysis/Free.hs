@@ -42,6 +42,10 @@ hoistFree _ (Arr f) = Arr f
 hoistFree _ Id = Id
 
 
+runFree :: (Category q, Traversing q) => (p :-> q) -> Free p :-> q
+runFree nat = hoistFree nat >>> retractFree
+
+
 traceFree :: (forall x y. p x y -> String) -> Free p a b -> String
 traceFree _ Id = "Id"
 traceFree _ (Arr _) = "Arr"
