@@ -48,7 +48,10 @@ class FindElem (t :: * -> * -> *) (r :: [* -> * -> *]) where
 instance FindElem t (t ': r) where
   elemNo = P 0
 
-instance {-# OVERLAPPABLE #-} FindElem t r => FindElem t (t' ': r) where
+-- instance {-# OVERLAPPABLE #-} FindElem t r => FindElem t (t' ': r) where
+--   elemNo = P $ 1 + unP (elemNo :: P t r)
+
+instance FindElem t r => FindElem t (t' ': r) where
   elemNo = P $ 1 + unP (elemNo :: P t r)
 
 class IfNotFound (t :: * -> * -> *) (r :: [* -> * -> *]) (w :: [* -> * -> *])
