@@ -1,6 +1,5 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GADTs #-}
@@ -43,7 +42,7 @@ unsafePrj n (Union n' x)
 newtype P (t :: * -> * -> *) (r :: [* -> * -> *])  = P {unP :: Word}
 
 
-class Member (t :: * -> * -> *) (r :: [* -> * -> *]) | r -> t where
+class Member (t :: * -> * -> *) (r :: [* -> * -> *]) where
   elemNo :: P t r
   inj :: t :-> Union r
   prj :: Union r a b -> Maybe (t a b)
