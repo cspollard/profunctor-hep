@@ -1,5 +1,6 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GADTs #-}
@@ -42,35 +43,32 @@ unsafePrj n (Union n' x)
 newtype P (t :: * -> * -> *) (r :: [* -> * -> *])  = P {unP :: Word}
 
 
-class FindElem (t :: * -> * -> *) (r :: [* -> * -> *]) where
+class Member (t :: * -> * -> *) (r :: [* -> * -> *]) | r -> t where
   elemNo :: P t r
+  inj :: t :-> Union r
+  prj :: Union r a b -> Maybe (t a b)
 
-instance FindElem t (t ': r) where
+
+instance Member t (t ': r) where
   elemNo = P 0
+  {-# INLINE elemNo #-}
 
-instance {-# OVERLAPPABLE #-} FindElem t r => FindElem t (t' ': r) where
+  inj = unsafeInj 0
+  {-# INLINE inj #-}
+
+  prj = unsafePrj 0
+  {-# INLINE prj #-}
+
+
+instance {-# OVERLAPPABLE #-} Member t r => Member t (s ': r) where
   elemNo = P $ 1 + unP (elemNo :: P t r)
+  {-# INLINE elemNo #-}
 
-class IfNotFound (t :: * -> * -> *) (r :: [* -> * -> *]) (w :: [* -> * -> *])
+  inj = unsafeInj $ 1 + unP (elemNo :: P t r)
+  {-# INLINE inj #-}
 
-instance TypeError ('Text "‘" ':<>: 'ShowType t
-                    ':<>: 'Text "’ is not a member of the type-level list"
-                    ':$$: 'Text "  ‘" ':<>: 'ShowType w ':<>: 'Text "’"
-                    ':$$: 'Text "In the constraint ("
-                    ':<>: 'ShowType (Member t w) ':<>: 'Text ")")
-    => IfNotFound t '[] w
-
-instance IfNotFound t (t ': r) w
-
-instance {-# OVERLAPPABLE #-} IfNotFound t r w => IfNotFound t (t' ': r) w
-
-instance {-# INCOHERENT #-} IfNotFound t r w
-
-
-class FindElem arr arrs => Member (arr :: * -> * -> *) arrs where
-  inj :: arr :-> Union arrs
-
-  prj :: Union arrs a b -> Maybe (arr a b)
+  prj = unsafePrj $ 1 + unP (elemNo :: P t r)
+  {-# INLINE prj #-}
 
 
 type family Members effs effs' :: Constraint where
@@ -78,13 +76,44 @@ type family Members effs effs' :: Constraint where
   Members '[] effs' = ()
 
 
-instance (FindElem t r, IfNotFound t r r) => Member t r where
-  inj = unsafeInj $ unP (elemNo :: P t r)
-  {-# INLINE inj #-}
 
-  prj = unsafePrj $ unP (elemNo :: P t r)
-  {-# INLINE prj #-}
-
+-- class FindElem (t :: * -> * -> *) (r :: [* -> * -> *]) where
+--   elemNo :: P t r
+-- 
+-- instance FindElem t (t ': r) where
+--   elemNo = P 0
+-- 
+-- instance {-# OVERLAPPABLE #-} FindElem t r => FindElem t (t' ': r) where
+--   elemNo = P $ 1 + unP (elemNo :: P t r)
+-- 
+-- class IfNotFound (t :: * -> * -> *) (r :: [* -> * -> *]) (w :: [* -> * -> *])
+-- 
+-- instance TypeError ('Text "‘" ':<>: 'ShowType t
+--                     ':<>: 'Text "’ is not a member of the type-level list"
+--                     ':$$: 'Text "  ‘" ':<>: 'ShowType w ':<>: 'Text "’"
+--                     ':$$: 'Text "In the constraint ("
+--                     ':<>: 'ShowType (Member t w) ':<>: 'Text ")")
+--     => IfNotFound t '[] w
+-- 
+-- instance IfNotFound t (t ': r) w
+-- 
+-- instance {-# OVERLAPPABLE #-} IfNotFound t r w => IfNotFound t (t' ': r) w
+-- 
+-- instance {-# INCOHERENT #-} IfNotFound t r w
+-- 
+-- 
+-- class FindElem arr arrs => Member (arr :: * -> * -> *) arrs where
+--   inj :: arr :-> Union arrs
+-- 
+--   prj :: Union arrs a b -> Maybe (arr a b)
+-- 
+-- 
+-- instance (FindElem t r, IfNotFound t r r) => Member t r where
+--   inj = unsafeInj $ unP (elemNo :: P t r)
+--   {-# INLINE inj #-}
+-- 
+--   prj = unsafePrj $ unP (elemNo :: P t r)
+--   {-# INLINE prj #-}
 
 data (::+::) arr arr' a b where
   L2 :: arr a b -> (::+::) arr arr' a b
