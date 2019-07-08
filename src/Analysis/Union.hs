@@ -48,19 +48,24 @@ newtype P (t :: * -> * -> *) (r :: [* -> * -> *])  = P {unP :: Word}
 
 class Member (t :: * -> * -> *) (r :: [* -> * -> *]) where
   elemNo :: P t r
+
   inj :: t a b -> U r a b
+  inj = unsafeInj $ 1 + unP (elemNo :: P t r)
+  {-# INLINE inj #-}
+
   prj :: U r a b -> Maybe (t a b)
+  prj = unsafePrj $ 1 + unP (elemNo :: P t r)
+  {-# INLINE prj #-}
+
+
+instance Member t (t ': r) where
+  elemNo = P 0
 
 
 instance {-# OVERLAPPABLE #-} Member t r => Member t (s ': r) where
   elemNo = P $ 1 + unP (elemNo :: P t r)
   {-# INLINE elemNo #-}
 
-  inj = unsafeInj $ 1 + unP (elemNo :: P t r)
-  {-# INLINE inj #-}
-
-  prj = unsafePrj $ 1 + unP (elemNo :: P t r)
-  {-# INLINE prj #-}
 
 
 type family Members effs effs' :: Constraint where
