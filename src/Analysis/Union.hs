@@ -12,10 +12,9 @@
 
 
 module Analysis.Union
- ( Union, U, Member(..), Members(..), (::+::)(..), extract, sumI, sumU, runU, inj
+ ( Union, U, Member(..), Members(..), (::+::)(..), extract, sumI, sumU, runU
  ) where
 
-import GHC.Natural
 import Data.Proxy
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Profunctor
@@ -26,54 +25,42 @@ import GHC.TypeNats
 
 -- | Open union is a strong sum (existential with an evidence).
 data Union (r :: [* -> * -> *]) a b where
-  Union :: !Natural -> !(p a b) -> Union r a b
+  Union :: {-# UNPACK #-} !Word -> (p a b) -> Union r a b
 
 
 type U = Union
 
-unsafeInj :: Natural -> t a b -> Union r a b
+
+unsafeInj :: Word -> t a b -> Union r a b
 unsafeInj = Union
 {-# INLINE unsafeInj #-}
 
-unsafePrj :: Natural -> Union r a b -> Maybe (t a b)
+
+unsafePrj :: Word -> Union r a b -> Maybe (t a b)
 unsafePrj n (Union n' x)
   | n == n'   = Just (unsafeCoerce x)
   | otherwise = Nothing
 {-# INLINE unsafePrj #-}
 
 
-type family Elem (t :: * -> * -> *) (r :: [* -> * -> *]) :: Nat where
-  Elem t (t ': r) = 0
-  Elem t (s ': r) = 1 + Elem t r
+newtype P (t :: * -> * -> *) (r :: [* -> * -> *])  = P {unP :: Word}
 
-type family Member t r :: Constraint where
-  Member t r = KnownNat (Elem t r)
 
--- class KnownNat (Elem t r) => Member (t :: * -> * -> *) (r :: [* -> * -> *])
+class Member (t :: * -> * -> *) (r :: [* -> * -> *]) where
+  elemNo :: P t r
+  inj :: t a b -> U r a b
+  prj :: U r a b -> Maybe (t a b)
 
-inj :: forall t r. Member t r => t :-> U r
-inj = Union $ natVal (Proxy :: Proxy (Elem t r))
 
--- instance Member t (t ': r) where
---   elemNo = natVal (Proxy :: Proxy (Elem t r))
---   {-# INLINE elemNo #-}
--- 
---   inj = unsafeInj 0
---   {-# INLINE inj #-}
--- 
---   prj = unsafePrj 0
---   {-# INLINE prj #-}
--- 
--- 
--- instance {-# OVERLAPPABLE #-} Member t r => Member t (s ': r) where
---   elemNo = P $ 1 + unP (elemNo :: P t r)
---   {-# INLINE elemNo #-}
--- 
---   inj = unsafeInj $ 1 + unP (elemNo :: P t r)
---   {-# INLINE inj #-}
--- 
---   prj = unsafePrj $ 1 + unP (elemNo :: P t r)
---   {-# INLINE prj #-}
+instance {-# OVERLAPPABLE #-} Member t r => Member t (s ': r) where
+  elemNo = P $ 1 + unP (elemNo :: P t r)
+  {-# INLINE elemNo #-}
+
+  inj = unsafeInj $ 1 + unP (elemNo :: P t r)
+  {-# INLINE inj #-}
+
+  prj = unsafePrj $ 1 + unP (elemNo :: P t r)
+  {-# INLINE prj #-}
 
 
 type family Members effs effs' :: Constraint where
