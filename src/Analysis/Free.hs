@@ -1,6 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 
-module Analysis.Free where
+module Analysis.Free
+  ( U, inj, prj, runU, extract, Analysis
+  , liftFree, retractFree, runFree, traceFree
+  , module X
+  ) where
 
 import Prelude hiding (id, (.))
 import Control.Arrow
@@ -8,7 +12,7 @@ import Control.Category
 import Data.Profunctor
 import Data.Profunctor.Traversing
 import Data.Extensible.Sum
-import Data.Extensible.Class
+import Data.Extensible.Class as X
 
 
 
