@@ -1,20 +1,26 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 
 module Analysis.Free
-  ( U, inj, prj, runU, extract, Analysis
-  , liftFree, retractFree, runFree, traceFree
+  ( U, inj, prj, runU, extract, Analysis, Free
+  , liftFree, retractFree, runFree, traceFree, hoistFree
+  , Members
   , module X
   ) where
 
 import Prelude hiding (id, (.))
 import Control.Arrow
 import Control.Category
+import Data.Kind
 import Data.Profunctor
 import Data.Profunctor.Traversing
 import Data.Extensible.Sum
 import Data.Extensible.Class as X
 
 
+type family Members (s :: [k]) (t :: [k]) :: Constraint where
+  Members s '[] = ()
+  Members s (t ': ts) = (Member s t, Members s ts)
 
 newtype Rel a b rel = Rel { runRel :: rel a b }
 newtype U rels a b = U { runUnion :: Rel a b :| rels }
