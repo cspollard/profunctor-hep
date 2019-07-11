@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Analysis.Free where
 
 import Prelude hiding (id, (.))
@@ -5,7 +7,36 @@ import Control.Arrow
 import Control.Category
 import Data.Profunctor
 import Data.Profunctor.Traversing
+import Data.Extensible.Sum
+import Data.Extensible.Class
 
+
+
+newtype Rel a b rel = Rel { runRel :: rel a b }
+newtype U rels a b = U { runUnion :: Rel a b :| rels }
+
+
+inj :: Member rels rel => rel :-> U rels
+inj = U <<< embed <<< Rel
+{-# INLINE inj #-}
+
+
+prj :: (rel :-> rel') -> (U rels :-> rel') -> U (rel ': rels) :-> rel'
+prj nat nat' = ((nat <<< runRel) <:| (nat' <<< U)) <<< runUnion
+{-# INLINE prj #-}
+
+
+runU :: (rel :-> U rels) -> U (rel ': rels) :-> U rels
+runU nat = prj nat id
+{-# INLINE runU #-}
+
+
+extract :: U '[rel] :-> rel
+extract = prj id (exhaust <<< runUnion)
+{-# INLINE extract #-}
+
+
+type Analysis rels a b = Free (U rels) a b
 
 
 data Free p a b where

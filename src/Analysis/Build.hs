@@ -2,9 +2,11 @@
 
 module Analysis.Build where
 
-import Analysis.Union
 import Data.Profunctor ((:->))
 import Analysis.Const
+import Analysis.Free
+import Data.Extensible.Sum
+import Data.Extensible.Class
 
 
 data Num' a b where
@@ -14,11 +16,11 @@ data Num' a b where
   Mul' :: Num a => Num' (a, a) a
 
 
-int' :: (Num a, Member Num' arrs) => U arrs Integer a
+int' :: (Num a, Member arrs Num') => U arrs Integer a
 int' = inj Int'
 
 
-add', sub', mul' :: (Num a, Member Num' arrs) => U arrs (a, a) a
+add', sub', mul' :: (Num a, Member arrs Num') => U arrs (a, a) a
 add' = inj Add'
 sub' = inj Sub'
 mul' = inj Mul'
@@ -43,11 +45,11 @@ data Frac' a b where
   Div' :: Fractional a => Frac' (a, a) a
 
 
-rat' :: (Fractional a, Member Frac' arrs) => U arrs Rational a
+rat' :: (Fractional a, Member arrs Frac') => U arrs Rational a
 rat' = inj Rat'
 
 
-div' :: (Fractional a, Member Frac' arrs) => U arrs (a, a) a
+div' :: (Fractional a, Member arrs Frac') => U arrs (a, a) a
 div' = inj Div'
 
 
