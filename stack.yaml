@@ -2,3 +2,7 @@ resolver: lts-13.25
 
 packages:
 - .
+
+extra-deps:
+- extensible-0.5.1
+- membership-0

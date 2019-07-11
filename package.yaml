@@ -32,6 +32,7 @@ dependencies:
 - keys    
 - profunctors    
 - bifunctors    
+- extensible
 
 library:
   source-dirs: src

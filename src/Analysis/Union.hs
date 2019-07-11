@@ -58,7 +58,7 @@ newtype P (t :: * -> * -> *) (r :: [* -> * -> *])  = P {unP :: Word}
 --   {-# INLINE prj #-}
 -- 
 -- 
--- instance Member t (t ': r) where
+-- instance {-# OVERLAPPING #-} Member t (t ': r) where
 --   elemNo = P 0
 -- 
 -- 
@@ -110,6 +110,7 @@ instance (FindElem t r, IfNotFound t r r) => Member t r where
 type family Members effs effs' :: Constraint where
   Members (eff ': effs) effs' = (Member eff effs', Members effs effs')
   Members '[] effs' = ()
+
 
 data (::+::) arr arr' a b where
   L2 :: arr a b -> (::+::) arr arr' a b
