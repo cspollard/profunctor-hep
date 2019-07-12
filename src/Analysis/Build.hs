@@ -18,12 +18,16 @@ data Num' a b where
 
 int' :: (Num a, Member arrs Num') => U arrs Integer a
 int' = inj Int'
+{-# INLINE int' #-}
 
 
 add', sub', mul' :: (Num a, Member arrs Num') => U arrs (a, a) a
 add' = inj Add'
+{-# INLINE add' #-}
 sub' = inj Sub'
+{-# INLINE sub' #-}
 mul' = inj Mul'
+{-# INLINE mul' #-}
 
 
 runNum' :: Num' :-> (->)
@@ -31,6 +35,7 @@ runNum' Int' = fromInteger
 runNum' Add' = uncurry (+)
 runNum' Sub' = uncurry (-)
 runNum' Mul' = uncurry (*)
+{-# INLINE runNum' #-}
 
 
 repNum' :: Num' x y -> String
@@ -38,6 +43,7 @@ repNum' Int' = "Int'"
 repNum' Add' = "Add'"
 repNum' Sub' = "Sub'"
 repNum' Mul' = "Mul'"
+{-# INLINE repNum' #-}
 
 
 data Frac' a b where
@@ -47,19 +53,21 @@ data Frac' a b where
 
 rat' :: (Fractional a, Member arrs Frac') => U arrs Rational a
 rat' = inj Rat'
+{-# INLINE rat' #-}
 
 
 div' :: (Fractional a, Member arrs Frac') => U arrs (a, a) a
 div' = inj Div'
+{-# INLINE div' #-}
 
 
 runFrac' :: Frac' :-> (->)
 runFrac' Rat' = fromRational
 runFrac' Div' = uncurry (/)
+{-# INLINE runFrac' #-}
 
 
 repFrac' :: Frac' x y -> String
 repFrac' Rat' = "Rat'"
 repFrac' Div' = "Div'"
-
-
+{-# INLINE repFrac' #-}

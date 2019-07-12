@@ -56,21 +56,23 @@ data Free p a b where
   Comp :: Free p b c -> Free p a b -> Free p a c
   Par :: Free p a b -> Free p a' b' -> Free p (a, a') (b, b')
   Split :: Free p a b -> Free p a' b' -> Free p (Either a a') (Either b b')
-  Wand :: (forall f. Applicative f => (a -> f b) -> s -> f t) -> Free p a b -> Free p s t
+  -- Wand :: (forall f. Applicative f => (a -> f b) -> s -> f t) -> Free p a b -> Free p s t
 
 
 liftFree :: p :-> Free p
 liftFree = Lift
+{-# INLINE liftFree #-}
 
 
-retractFree :: (Category p, Traversing p) => Free p :-> p
+retractFree :: (Category p, Choice p, Strong p) => Free p :-> p
 retractFree Id = id
 retractFree (Arr f) = rmap f id
 retractFree (Lift p) = p
 retractFree (Comp f f') = retractFree f <<< retractFree f'
 retractFree (Par p q) = first' (retractFree p) >>> second' (retractFree q)
 retractFree (Split p q) = left' (retractFree p) >>> right' (retractFree q)
-retractFree (Wand l p) = wander l (retractFree p)
+{-# INLINE retractFree #-}
+-- retractFree (Wand l p) = wander l (retractFree p)
 
 
 hoistFree :: (p :-> q) -> Free p :-> Free q
@@ -78,13 +80,15 @@ hoistFree nat (Lift p) = Lift (nat p)
 hoistFree nat (Comp f f') = Comp (hoistFree nat f) (hoistFree nat f')
 hoistFree nat (Par p q) = Par (hoistFree nat p) (hoistFree nat q)
 hoistFree nat (Split p q) = Split (hoistFree nat p) (hoistFree nat q)
-hoistFree nat (Wand l p) = Wand l (hoistFree nat p)
+-- hoistFree nat (Wand l p) = Wand l (hoistFree nat p)
 hoistFree _ (Arr f) = Arr f
 hoistFree _ Id = Id
+{-# INLINE hoistFree #-}
 
 
-runFree :: (Category q, Traversing q) => (p :-> q) -> Free p :-> q
+runFree :: (Category q, Choice q, Strong q) => (p :-> q) -> Free p :-> q
 runFree nat = hoistFree nat >>> retractFree
+{-# INLINE runFree #-}
 
 
 traceFree :: (forall x y. p x y -> String) -> Free p a b -> String
@@ -94,33 +98,47 @@ traceFree f (Lift p) = "Lift (" ++ f p ++ ")"
 traceFree f (Comp p p') = "Comp (" ++ traceFree f p ++ ") (" ++ traceFree f p' ++ ")"
 traceFree f (Par p q) = "Par (" ++ traceFree f p ++ ") (" ++ traceFree f q ++ ")"
 traceFree f (Split p q) = "Split (" ++ traceFree f p ++ ") (" ++ traceFree f q ++ ")"
-traceFree f (Wand l p) = "Wand (" ++ traceFree f p ++ ")"
+{-# INLINE traceFree #-}
+-- traceFree f (Wand l p) = "Wand (" ++ traceFree f p ++ ")"
 
 
 
 
 instance Profunctor (Free p) where
   dimap f g p = arr f >>> p >>> arr g
+  {-# INLINE dimap #-}
 
 instance Strong (Free p) where
   first' p = Par p id
+  {-# INLINE first' #-}
+
   second' p = Par id p
+  {-# INLINE second' #-}
 
 instance Choice (Free p) where
   left' p = Split p id
-  right' p = Split id p
+  {-# INLINE left' #-}
 
-instance Traversing (Free p) where
-  wander = Wand
+  right' p = Split id p
+  {-# INLINE right' #-}
+
+-- instance Traversing (Free p) where
+--   wander = Wand
 
 instance Category (Free p) where
   id = Id
+  {-# INLINE id #-}
+
   (.) = Comp
+  {-# INLINE (.) #-}
 
 instance Arrow (Free p) where
   arr = Arr
+  {-# INLINE arr #-}
+
   (***) = Par
+  {-# INLINE (***) #-}
 
 instance ArrowChoice (Free p) where
   (+++) = Split
-
+  {-# INLINE (+++) #-}
