@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Analysis.Build where
+module Analysis.Numeric where
 
-import Data.Profunctor ((:->))
-import Analysis.Const
+
 import Analysis.Free
+import Data.Profunctor ((:->))
 import Data.Extensible.Sum
 import Data.Extensible.Class
 
