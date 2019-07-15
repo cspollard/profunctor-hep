@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PolyKinds #-}
 
 module Analysis.Free
@@ -22,6 +23,7 @@ type family Members (s :: [k]) (t :: [k]) :: Constraint where
   Members s '[] = ()
   Members s (t ': ts) = (Member s t, Members s ts)
 
+
 newtype Rel a b rel = Rel { runRel :: rel a b }
 newtype U rels a b = U { runUnion :: Rel a b :| rels }
 
@@ -31,7 +33,7 @@ inj = U <<< embed <<< Rel
 {-# INLINE inj #-}
 
 
-prj :: (rel :-> rel') -> (U rels :-> rel') -> U (rel ': rels) :-> rel'
+prj :: (rel a b -> rel' c d) -> (U rels a b -> rel' c d) -> U (rel ': rels) a b -> rel' c d
 prj nat nat' = ((nat <<< runRel) <:| (nat' <<< U)) <<< runUnion
 {-# INLINE prj #-}
 
@@ -56,7 +58,8 @@ data Free p a b where
   Comp :: Free p b c -> Free p a b -> Free p a c
   Par :: Free p a b -> Free p a' b' -> Free p (a, a') (b, b')
   Split :: Free p a b -> Free p a' b' -> Free p (Either a a') (Either b b')
-  -- Wand :: (forall f. Applicative f => (a -> f b) -> s -> f t) -> Free p a b -> Free p s t
+
+
 
 
 liftFree :: p :-> Free p
@@ -64,6 +67,8 @@ liftFree = Lift
 {-# INLINE liftFree #-}
 
 
+-- TODO
+-- only one of retract and hoist should be necessary...
 retractFree :: (Category p, Choice p, Strong p) => Free p :-> p
 retractFree Id = id
 retractFree (Arr f) = rmap f id
@@ -72,23 +77,26 @@ retractFree (Comp f f') = retractFree f <<< retractFree f'
 retractFree (Par p q) = first' (retractFree p) >>> second' (retractFree q)
 retractFree (Split p q) = left' (retractFree p) >>> right' (retractFree q)
 {-# INLINE retractFree #-}
--- retractFree (Wand l p) = wander l (retractFree p)
 
 
 hoistFree :: (p :-> q) -> Free p :-> Free q
+hoistFree _ Id = Id
+hoistFree _ (Arr f) = Arr f
 hoistFree nat (Lift p) = Lift (nat p)
 hoistFree nat (Comp f f') = Comp (hoistFree nat f) (hoistFree nat f')
 hoistFree nat (Par p q) = Par (hoistFree nat p) (hoistFree nat q)
 hoistFree nat (Split p q) = Split (hoistFree nat p) (hoistFree nat q)
--- hoistFree nat (Wand l p) = Wand l (hoistFree nat p)
-hoistFree _ (Arr f) = Arr f
-hoistFree _ Id = Id
 {-# INLINE hoistFree #-}
 
 
 runFree :: (Category q, Choice q, Strong q) => (p :-> q) -> Free p :-> q
 runFree nat = hoistFree nat >>> retractFree
 {-# INLINE runFree #-}
+
+runFree' :: (Category q, Choice q, Strong q) => Free p a b -> (p :-> q) -> q a b    
+runFree' a nat = runFree nat a    
+{-# INLINE runFree' #-}
+    
 
 
 traceFree :: (forall x y. p x y -> String) -> Free p a b -> String
@@ -99,7 +107,6 @@ traceFree f (Comp p p') = "Comp (" ++ traceFree f p ++ ") (" ++ traceFree f p' +
 traceFree f (Par p q) = "Par (" ++ traceFree f p ++ ") (" ++ traceFree f q ++ ")"
 traceFree f (Split p q) = "Split (" ++ traceFree f p ++ ") (" ++ traceFree f q ++ ")"
 {-# INLINE traceFree #-}
--- traceFree f (Wand l p) = "Wand (" ++ traceFree f p ++ ")"
 
 
 
@@ -121,9 +128,6 @@ instance Choice (Free p) where
 
   right' p = Split id p
   {-# INLINE right' #-}
-
--- instance Traversing (Free p) where
---   wander = Wand
 
 instance Category (Free p) where
   id = Id
