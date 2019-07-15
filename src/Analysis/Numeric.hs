@@ -5,8 +5,6 @@ module Analysis.Numeric where
 
 import Analysis.Free
 import Data.Profunctor ((:->))
-import Data.Extensible.Sum
-import Data.Extensible.Class
 
 
 data Num' a b where

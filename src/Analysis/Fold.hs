@@ -9,18 +9,9 @@
 module Analysis.Fold where
 
 import Data.Tuple (swap)
-import Control.Lens
 import           Control.Arrow
 import           Control.Category
-import           Control.Lens               (Traversal')
-import           Control.Lens.At
-import           Data.Coerce
-import           Data.Foldable
-import           Data.Key
-import           Data.Map.Merge.Strict
-import           Data.Map.Strict            (Map (..))
-import           Data.Monoid                (Sum (..))
-import           Data.Profunctor.Traversing
+import Data.Profunctor hiding (curry')
 import           Analysis.MealyMoore
 import           Prelude                    hiding (id, (.))
 
@@ -35,12 +26,15 @@ monoidal = accum mempty
 
 
 counter :: Enum b => b -> Moore' a b
-counter b = feedback' $ Moore (arr $ \(b', a) -> succ b') b
+counter b = feedback' $ Moore (arr $ \(b', _) -> succ b') b
 
 
-sink :: Mealy' a ()
+sink :: Moore' a ()
 sink = pure ()
 
+
+prepend :: (Category arr, Strong arr) => Mealy arr a b -> Moore arr b c -> Moore arr a c
+prepend m' (Moore m o) = Moore (m' >>> m) o
 
 
 type T arr a s = arr a a -> arr s s
@@ -64,6 +58,7 @@ histoM
   -> s
   -> MooreK m i s
 histoM l = histo (lensToK <<< l)
+
 
 lensToK
   :: ((a -> f b) -> (s -> f t))

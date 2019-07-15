@@ -27,15 +27,17 @@ default-extensions:
 
 dependencies:
 - base >= 4.7 && < 5
-- lens    
-- containers    
-- keys    
-- profunctors    
-- bifunctors    
+- lens
+- profunctors
+- bifunctors
 - extensible
+- monoidal-containers
+- hashable
+- deriving-compat
 
 library:
   source-dirs: src
+  ghc-options: -Wall
 
 executables:
   profunctor-hep-exe:

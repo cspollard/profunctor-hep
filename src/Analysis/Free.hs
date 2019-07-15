@@ -4,7 +4,7 @@
 
 module Analysis.Free
   ( U, inj, prj, runU, extract, Analysis, Free
-  , liftFree, retractFree, runFree, traceFree, hoistFree
+  , liftFree, retractFree, runFree, traceFree, hoistFree, runFree', hoistFree'
   , Members
   , module X
   ) where
@@ -14,9 +14,8 @@ import Control.Arrow
 import Control.Category
 import Data.Kind
 import Data.Profunctor
-import Data.Profunctor.Traversing
 import Data.Extensible.Sum
-import Data.Extensible.Class as X
+import Data.Extensible.Class as X (Member(..))
 
 
 type family Members (s :: [k]) (t :: [k]) :: Constraint where
@@ -92,6 +91,12 @@ hoistFree nat (Split p q) = Split (hoistFree nat p) (hoistFree nat q)
 runFree :: (Category q, Choice q, Strong q) => (p :-> q) -> Free p :-> q
 runFree nat = hoistFree nat >>> retractFree
 {-# INLINE runFree #-}
+
+
+hoistFree' :: Free p a b -> (p :-> q) -> Free q a b
+hoistFree' a nat = hoistFree nat a
+{-# INLINE hoistFree' #-}
+
 
 runFree' :: (Category q, Choice q, Strong q) => Free p a b -> (p :-> q) -> q a b    
 runFree' a nat = runFree nat a    

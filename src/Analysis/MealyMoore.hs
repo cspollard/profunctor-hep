@@ -14,7 +14,6 @@ import           Control.Arrow
 import           Control.Category
 import           Data.Functor.Identity
 import           Data.Profunctor
-import           Data.Profunctor.Traversing
 import           Prelude               hiding (id, (.))
 import Data.Foldable (foldlM)
 
