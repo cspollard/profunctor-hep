@@ -14,7 +14,7 @@ pattern Identity2 p = Tannen (Identity p)
 type Proxy2 = Tannen Proxy
 pattern Proxy2 = Tannen Proxy
 
-type Const2 w p = Tannen (Const w) (Proxy2 p)
+type Const2 w = Tannen (Const w) Identity2
 pattern Const2 w = Tannen (Const w)
 
 type Labeled2 w = Tannen ((,) w)
