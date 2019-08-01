@@ -54,11 +54,11 @@ starry l (Star f) = Star (l f)
 
 containedMoore
   :: (Strong p, ArrowApply p)
-  => (a -> Optic' p s (Moore p w w))
+  => (a -> Optic' p s (Moore p b w))
     -- ^ instructions to access parts of a container given an index
   -> s
     -- ^ the container of accumulators
-  -> Moore p (a, w) s
+  -> Moore p (a, b) s
     -- ^ the total accumulator
 containedMoore trav s = feedback' $ Moore (simple go) s
   where
@@ -68,9 +68,9 @@ containedMoore trav s = feedback' $ Moore (simple go) s
 -- | a histogram is a structure of accumulators that 
 --    accumulates at an index.
 histogram
-  :: (Monad m, L.Ixed s, L.Index s ~ a, L.IxValue s ~ MooreK m w w)
+  :: (Monad m, L.Ixed s, L.Index s ~ a, L.IxValue s ~ MooreK m b w)
   => s
     -- ^ the container of accumulators
-  -> MooreK m (a, w) s
+  -> MooreK m (a, b) s
     -- ^ the total accumulator
 histogram = containedMoore (starry <<< L.ix)
