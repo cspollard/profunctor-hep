@@ -24,7 +24,6 @@ data Ana p a b where
   Lift :: p a b -> Ana p a b
   Comp :: Ana p b c -> Ana p a b -> Ana p a c
   Par :: Ana p a b -> Ana p a' b' -> Ana p (a, a') (b, b')
-  -- Split :: Ana p a b -> Ana p a' b' -> Ana p (Either a a') (Either b b')
 
 
 
@@ -35,13 +34,12 @@ liftAna = Lift
 
 -- TODO
 -- only one of retract and hoist should be necessary...
-retractAna :: (Category p, Choice p, Strong p) => Ana p :-> p
+retractAna :: (Category p, Strong p) => Ana p :-> p
 retractAna Id = id
 retractAna (Arr f) = rmap f id
 retractAna (Lift p) = p
 retractAna (Comp f f') = retractAna f <<< retractAna f'
 retractAna (Par p q) = first' (retractAna p) >>> second' (retractAna q)
--- retractAna (Split p q) = left' (retractAna p) >>> right' (retractAna q)
 {-# INLINE retractAna #-}
 
 
@@ -51,11 +49,10 @@ hoistAna _ (Arr f) = Arr f
 hoistAna nat (Lift p) = Lift (nat p)
 hoistAna nat (Comp f f') = Comp (hoistAna nat f) (hoistAna nat f')
 hoistAna nat (Par p q) = Par (hoistAna nat p) (hoistAna nat q)
--- hoistAna nat (Split p q) = Split (hoistAna nat p) (hoistAna nat q)
 {-# INLINE hoistAna #-}
 
 
-runAna :: (Category q, Choice q, Strong q) => (p :-> q) -> Ana p :-> q
+runAna :: (Category q, Strong q) => (p :-> q) -> Ana p :-> q
 runAna nat = hoistAna nat >>> retractAna
 {-# INLINE runAna #-}
 
@@ -65,7 +62,7 @@ hoistAna' a nat = hoistAna nat a
 {-# INLINE hoistAna' #-}
 
 
-runAna' :: (Category q, Choice q, Strong q) => Ana p a b -> (p :-> q) -> q a b    
+runAna' :: (Category q, Strong q) => Ana p a b -> (p :-> q) -> q a b    
 runAna' a nat = runAna nat a    
 {-# INLINE runAna' #-}
     
@@ -82,7 +79,6 @@ traceAna f (Par p q) = "Par (" ++ traceAna f p ++ ") (" ++ traceAna f q ++ ")"
 
 
 
-
 instance Profunctor (Ana p) where
   dimap f g p = arr f >>> p >>> arr g
   {-# INLINE dimap #-}
@@ -93,13 +89,6 @@ instance Strong (Ana p) where
 
   second' p = Par id p
   {-# INLINE second' #-}
-
--- instance Choice (Ana p) where
---   left' p = Split p id
---   {-# INLINE left' #-}
--- 
---   right' p = Split id p
---   {-# INLINE right' #-}
 
 instance Category (Ana p) where
   id = Id
@@ -114,7 +103,3 @@ instance Arrow (Ana p) where
 
   (***) = Par
   {-# INLINE (***) #-}
-
--- instance ArrowChoice (Ana p) where
---   (+++) = Split
---   {-# INLINE (+++) #-}
