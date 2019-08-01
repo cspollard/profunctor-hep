@@ -11,31 +11,41 @@ module Analysis.Fold where
 
 import           Control.Arrow
 import Data.Profunctor hiding (curry')
-import Data.Monoid (Sum(..))
+import Data.Monoid (Sum(..), Product(..))
 import           Analysis.MealyMoore
 import           Prelude                    hiding (id, (.))
 import qualified Control.Lens as L
 
 
 
-accum :: (Semigroup m, Arrow p) => p (m, m) m
-accum = arr $ uncurry (<>)
+accum :: Semigroup m => m -> Moore' m m
+accum m = feedback' $ Moore (arr $ uncurry (<>)) m
+{-# INLINE accum  #-}
 
 
 monoidal :: Monoid m => Moore' m m
-monoidal = feedback' $ Moore accum mempty
+monoidal = accum mempty
+{-# INLINE monoidal  #-}
 
 
 counter :: Enum b => b -> Moore' a b
 counter b = feedback' $ Moore (arr $ fst >>> succ) b
+{-# INLINE counter  #-}
 
 
 sink :: Moore' a ()
 sink = pure ()
+{-# INLINE sink  #-}
 
 
 summed :: Num a => Moore' a a
 summed = dimap Sum getSum $ monoidal
+{-# INLINE summed  #-}
+
+
+multiplied :: Num a => Moore' a a
+multiplied = dimap Product getProduct $ monoidal
+{-# INLINE multiplied #-}
 
 
 
@@ -50,6 +60,7 @@ type Lens' s a = Simple Lens s a
 
 starry :: ((a -> f b) -> (s -> f t)) -> Optic (Star f) s t a b
 starry l (Star f) = Star (l f)
+{-# INLINE starry #-}
 
 
 containedMoore
@@ -63,6 +74,7 @@ containedMoore
 containedMoore trav s = feedback' $ Moore (simple go) s
   where
     go = proc (ms', (a, w)) -> app -< (trav a (lmap (,w) chomp), ms')
+{-# INLINE containedMoore #-}
 
 
 -- | a histogram is a structure of accumulators that 
@@ -74,3 +86,4 @@ histogram
   -> MooreK m (a, b) s
     -- ^ the total accumulator
 histogram = containedMoore (starry <<< L.ix)
+{-# INLINE histogram  #-}
