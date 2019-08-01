@@ -11,11 +11,12 @@ module Analysis.Variation where
 import Data.Hashable
 import qualified Data.HashMap.Monoidal as HM
 import Data.Semigroup (First(..))
-import Control.Arrow ((<<<), Kleisli)
+import Control.Arrow ((<<<))
+import Data.Profunctor
 import Text.Show.Deriving
 
 
-type VarRel s = Kleisli (Variation s)
+type VarRel s = Star (Variation s)
 
 
 data Variation s a = Variation !a !(HM.MonoidalHashMap s (First a))

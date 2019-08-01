@@ -3,7 +3,7 @@ module Analysis
   ( module X
   ) where
 
-import Analysis.Free as X
+import Analysis.Ana as X
 import Analysis.Prims as X
 import Analysis.Weight as X
 import Analysis.Variation as X

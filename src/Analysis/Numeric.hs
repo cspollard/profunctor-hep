@@ -3,7 +3,7 @@
 module Analysis.Numeric where
 
 
-import Analysis.Free
+import Analysis.Ana
 import Data.Profunctor ((:->))
 
 
@@ -14,17 +14,17 @@ data Num' a b where
   Mul' :: Num a => Num' (a, a) a
 
 
-int' :: (Num a, Member arrs Num') => U arrs Integer a
-int' = inj Int'
+int' :: (Num a, Member arrs Num') => U2 arrs Integer a
+int' = inj2 Int'
 {-# INLINE int' #-}
 
 
-add', sub', mul' :: (Num a, Member arrs Num') => U arrs (a, a) a
-add' = inj Add'
+add', sub', mul' :: (Num a, Member arrs Num') => U2 arrs (a, a) a
+add' = inj2 Add'
 {-# INLINE add' #-}
-sub' = inj Sub'
+sub' = inj2 Sub'
 {-# INLINE sub' #-}
-mul' = inj Mul'
+mul' = inj2 Mul'
 {-# INLINE mul' #-}
 
 
@@ -49,13 +49,13 @@ data Frac' a b where
   Div' :: Fractional a => Frac' (a, a) a
 
 
-rat' :: (Fractional a, Member arrs Frac') => U arrs Rational a
-rat' = inj Rat'
+rat' :: (Fractional a, Member arrs Frac') => U2 arrs Rational a
+rat' = inj2 Rat'
 {-# INLINE rat' #-}
 
 
-div' :: (Fractional a, Member arrs Frac') => U arrs (a, a) a
-div' = inj Div'
+div' :: (Fractional a, Member arrs Frac') => U2 arrs (a, a) a
+div' = inj2 Div'
 {-# INLINE div' #-}
 
 

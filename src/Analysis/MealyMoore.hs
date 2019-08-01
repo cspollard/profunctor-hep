@@ -7,6 +7,8 @@
 {-# LANGUAGE PatternSynonyms           #-}
 {-# LANGUAGE RankNTypes                #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 
 module Analysis.MealyMoore where
 
@@ -24,9 +26,9 @@ data Moore arr i o = Moore !(Mealy arr i o) !o
 
 
 type Mealy' = Mealy (->)
-type MealyK m = Mealy (Kleisli m)
+type MealyK m = Mealy (Star m)
 type Moore' = Moore (->)
-type MooreK m = Moore (Kleisli m)
+type MooreK m = Moore (Star m)
 
 
 instance Profunctor arr => Profunctor (Mealy arr) where
@@ -76,6 +78,7 @@ instance (Category arr, Strong arr) => Arrow (Mealy arr) where
   {-# INLINE arr  #-}
   m *** m' = first' m <<< second m'
   {-# INLINE (***)  #-}
+
 
 
 instance Profunctor arr => Functor (Mealy arr i) where
@@ -177,8 +180,8 @@ foldlMoore = simplify' <<< foldlMooreK <<< generalize'
 {-# INLINE foldlMoore  #-}
 
 
-foldlK :: (Foldable t, Monad m) => Kleisli m (b, a) b -> Kleisli m (b, t a) b
-foldlK (Kleisli k) = Kleisli $ \(b, ta) -> foldlM (curry k) b ta
+foldlK :: (Foldable t, Monad m) => Star m (b, a) b -> Star m (b, t a) b
+foldlK (Star k) = Star $ \(b, ta) -> foldlM (curry k) b ta
 {-# INLINE foldlK  #-}
 
 
@@ -190,13 +193,21 @@ foldlMooreK m@(Moore _ o) = Moore (Mealy $ rmap foldlMooreK go) o
 
 
 simplify :: MealyK Identity i o -> Mealy' i o
-simplify = hoistMealy $ runKleisli >>> fmap runIdentity
+simplify = hoistMealy $ runStar >>> fmap runIdentity
 {-# INLINE simplify  #-}
 
 
 simplify' :: MooreK Identity i o -> Moore' i o
-simplify' = hoistMoore $ runKleisli >>> fmap runIdentity
+simplify' = hoistMoore $ runStar >>> fmap runIdentity
 {-# INLINE simplify' #-}
+
+
+instance Monad m => Arrow (Star m) where
+  arr = arr'
+  (***) = par'
+
+instance Monad m => ArrowApply (Star m) where
+  app = Star $ \(Star a, x) -> a x
 
 
 -- every strong category is an arrow
@@ -211,38 +222,16 @@ instance (Category arr, Strong arr) => Arrow (TmpA arr) where
 arr' :: (Category p, Strong p) => (a -> b) -> p a b
 arr' = runTmpA <<< arr
 
--- instance Arrow arr => Thread arr (Moore arr) where
---   thread f f' (Moore x fx m) = Moore (thread f f' m) (fx >>> f') $ thread f f' m
+par' :: (Category p, Strong p) => p a b -> p c d -> p (a, c) (b, d)
+par' m m' = runTmpA $ TmpA m *** TmpA m'
 
 
---
---
--- instance ArrowApply arr => ArrowChoice (Mealy arr) where
---   f +++ g = (f >>> arr Left) ||| (g >>> arr Right)
---
---
---
---
---
---
---
+-- every arrow is a strong category.
+newtype TmpA' arr a b = TmpA' { runTmpA' :: arr a b }
+  deriving (Category, Arrow) via arr
 
+instance Arrow arr => Profunctor (TmpA' arr) where
+  dimap f g (TmpA' a) = TmpA' $ arr f >>> a >>> arr g
 
-
--- Foldable is special to (->) and Kleisli somehow?
--- somehow this is particular to Hask
--- I think this boilerplate could be reduced.
--- we see this idea of e.g. chompsF being applied recursively.
--- surely this is happening other places?
--- is it related to feedback somehow?
---
--- chompsF :: Foldable f => Moore' a b -> Moore' (f a) b
--- chompsF m@(Moore x fx m) = Moore (b, Mealy f)
---   where
---     f xs = chompsF $ foldl (\g x -> feed (neglect g) x) m xs
---
--- chompsK :: (Foldable f, Monad m) => MooreK m i o -> MooreK m (f i) o
--- chompsK m@(Moore (b, _)) = Moore (b, Mealy $ Kleisli f)
---   where
---     f xs = chompsK <$> foldlM (\g x -> feedK (neglect g) x) m xs
---
+instance Arrow arr => Strong (TmpA' arr) where
+  first' (TmpA' a) = TmpA' $ first a

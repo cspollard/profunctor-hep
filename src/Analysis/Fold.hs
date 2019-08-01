@@ -1,4 +1,5 @@
 {-# LANGUAGE Arrows           #-}
+{-# LANGUAGE ConstraintKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms  #-}
@@ -8,60 +9,68 @@
 
 module Analysis.Fold where
 
-import Data.Tuple (swap)
 import           Control.Arrow
-import           Control.Category
 import Data.Profunctor hiding (curry')
+import Data.Monoid (Sum(..))
 import           Analysis.MealyMoore
 import           Prelude                    hiding (id, (.))
+import qualified Control.Lens as L
 
 
 
-accum :: Semigroup m => m -> Moore' m m
-accum m = feedback' $ Moore (arr $ uncurry (<>)) m
+accum :: (Semigroup m, Arrow p) => p (m, m) m
+accum = arr $ uncurry (<>)
 
 
 monoidal :: Monoid m => Moore' m m
-monoidal = accum mempty
+monoidal = feedback' $ Moore accum mempty
 
 
 counter :: Enum b => b -> Moore' a b
-counter b = feedback' $ Moore (arr $ \(b', _) -> succ b') b
+counter b = feedback' $ Moore (arr $ fst >>> succ) b
 
 
 sink :: Moore' a ()
 sink = pure ()
 
 
-prepend :: (Category arr, Strong arr) => Mealy arr a b -> Moore arr b c -> Moore arr a c
-prepend m' (Moore m o) = Moore (m' >>> m) o
+summed :: Num a => Moore' a a
+summed = dimap Sum getSum $ monoidal
 
 
-type T arr a s = arr a a -> arr s s
 
--- we could probably generalize this even more...
-histo
-  :: (ArrowApply arr, Profunctor arr)
-  => (i -> T arr (Moore arr i o) s)
+type Optic p s t a b = p a b -> p s t
+type Optic' p s a = p a a -> p s s
+type OpticC c s t a b = forall p. c p => Optic p s t a b
+
+type Simple l s a = l s s a a
+type Lens s t a b = OpticC Strong s t a b
+type Lens' s a = Simple Lens s a
+
+
+starry :: ((a -> f b) -> (s -> f t)) -> Optic (Star f) s t a b
+starry l (Star f) = Star (l f)
+
+
+containedMoore
+  :: (Strong p, ArrowApply p)
+  => (a -> Optic' p s (Moore p w w))
+    -- ^ instructions to access parts of a container given an index
   -> s
-  -> Moore arr i s
-histo l ms = Moore (Mealy $ rmap (histo l) go) ms
+    -- ^ the container of accumulators
+  -> Moore p (a, w) s
+    -- ^ the total accumulator
+containedMoore trav s = feedback' $ Moore (simple go) s
   where
-    go = proc i -> do
-      p <- app -< (curry' $ chomp <<< arr swap, i)
-      app -< (l i p, ms)
+    go = proc (ms', (a, w)) -> app -< (trav a (lmap (,w) chomp), ms')
 
 
-histoM
-  :: Monad m
-  => (i -> (MooreK m i o -> m (MooreK m i o)) -> s -> m s)
-  -> s
-  -> MooreK m i s
-histoM l = histo (lensToK <<< l)
-
-
-lensToK
-  :: ((a -> f b) -> (s -> f t))
-  -> Kleisli f a b
-  -> Kleisli f s t
-lensToK l (Kleisli k) = Kleisli $ l k
+-- | a histogram is a structure of accumulators that 
+--    accumulates at an index.
+histogram
+  :: (Monad m, L.Ixed s, L.Index s ~ a, L.IxValue s ~ MooreK m w w)
+  => s
+    -- ^ the container of accumulators
+  -> MooreK m (a, w) s
+    -- ^ the total accumulator
+histogram = containedMoore (starry <<< L.ix)

@@ -1,17 +1,15 @@
 module Analysis.Weight where
 
-import Data.Monoid (Sum(..), Product(..))
-import Control.Arrow
+import Data.Profunctor
+import Data.Profunctor.Traversing
+
 
 -- TODO
 -- give names to SFs using e.g. Compose (MonoidalHashMap String) First
 
-type Weighted = (,) (Sum Float)
+type ASDF p a w s = p (s, a, w) s -- a function from a to a view into s
 
-type Scaled = (,) (Product Float)
+type Hist a w s = forall p. Strong p => ASDF p a w s
 
-type SFRel = Kleisli ((,) (Product Float))
+type Hists a w s = forall p. Traversing p => ASDF p a w s
 
-
-sfToWeight :: Scaled a -> Weighted a
-sfToWeight (Product x, y) = (Sum x, y)
