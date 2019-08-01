@@ -222,16 +222,6 @@ instance (Category arr, Strong arr) => Arrow (TmpA arr) where
 arr' :: (Category p, Strong p) => (a -> b) -> p a b
 arr' = runTmpA <<< arr
 
+
 par' :: (Category p, Strong p) => p a b -> p c d -> p (a, c) (b, d)
 par' m m' = runTmpA $ TmpA m *** TmpA m'
-
-
--- every arrow is a strong category.
-newtype TmpA' arr a b = TmpA' { runTmpA' :: arr a b }
-  deriving (Category, Arrow) via arr
-
-instance Arrow arr => Profunctor (TmpA' arr) where
-  dimap f g (TmpA' a) = TmpA' $ arr f >>> a >>> arr g
-
-instance Arrow arr => Strong (TmpA' arr) where
-  first' (TmpA' a) = TmpA' $ first a

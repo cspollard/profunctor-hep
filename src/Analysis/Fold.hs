@@ -14,7 +14,6 @@ import Data.Profunctor hiding (curry')
 import Data.Monoid (Sum(..), Product(..))
 import           Analysis.MealyMoore
 import           Prelude                    hiding (id, (.))
-import qualified Control.Lens as L
 
 
 
@@ -63,7 +62,7 @@ starry l (Star f) = Star (l f)
 {-# INLINE starry #-}
 
 
-containedMoore
+moores
   :: (Strong p, ArrowApply p)
   => (a -> Optic' p s (Moore p b w))
     -- ^ instructions to access parts of a container given an index
@@ -71,19 +70,33 @@ containedMoore
     -- ^ the container of accumulators
   -> Moore p (a, b) s
     -- ^ the total accumulator
-containedMoore trav s = feedback' $ Moore (simple go) s
+moores trav s = feedback' $ Moore (simple go) s
   where
     go = proc (ms', (a, w)) -> app -< (trav a (lmap (,w) chomp), ms')
-{-# INLINE containedMoore #-}
+{-# INLINE moores #-}
 
 
 -- | a histogram is a structure of accumulators that 
---    accumulates at an index.
+--    requires an index pointing to exactly one item to update.
 histogram
-  :: (Monad m, L.Ixed s, L.Index s ~ a, L.IxValue s ~ MooreK m b w)
-  => s
+  :: (Strong p, ArrowApply p)
+  => (a -> Lens' s (Moore p b w))
+    -- ^ instructions to access parts of a container given an index
+  -> s
     -- ^ the container of accumulators
-  -> MooreK m (a, b) s
+  -> Moore p (a, b) s
     -- ^ the total accumulator
-histogram = containedMoore (starry <<< L.ix)
+histogram = moores
 {-# INLINE histogram  #-}
+
+
+histA
+  :: (Strong p, ArrowApply p)
+  => (a -> Lens' s (Moore p b w))
+    -- ^ instructions to access parts of a container given an index
+  -> s
+    -- ^ the container of accumulators
+  -> Mealy p (a, b) s
+    -- ^ the arrow of accumulators
+histA l = pop <<< histogram l
+{-# INLINE histA  #-}
