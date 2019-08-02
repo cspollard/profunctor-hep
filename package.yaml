@@ -29,6 +29,7 @@ dependencies:
 - base >= 4.7 && < 5
 - lens
 - profunctors
+- primitive
 - bifunctors
 - extensible
 - monoidal-containers

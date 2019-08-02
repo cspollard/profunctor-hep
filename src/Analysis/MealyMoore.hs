@@ -22,6 +22,8 @@ import Data.Foldable (foldlM)
 
 newtype Mealy arr i o = Mealy { runMealy :: arr i (Moore arr i o) }
 
+-- TODO
+-- need to think about strictness
 data Moore arr i o = Moore !(Mealy arr i o) !o
 
 

@@ -74,7 +74,6 @@ traceAna _ (Arr _) = "Arr"
 traceAna f (Lift p) = "Lift (" ++ f p ++ ")"
 traceAna f (Comp p p') = "Comp (" ++ traceAna f p ++ ") (" ++ traceAna f p' ++ ")"
 traceAna f (Par p q) = "Par (" ++ traceAna f p ++ ") (" ++ traceAna f q ++ ")"
--- traceAna f (Split p q) = "Split (" ++ traceAna f p ++ ") (" ++ traceAna f q ++ ")"
 {-# INLINE traceAna #-}
 
 
