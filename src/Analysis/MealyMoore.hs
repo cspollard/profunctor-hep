@@ -125,7 +125,7 @@ chomp = first (arr $ update >>> runMealy) >>> app
 {-# INLINE chomp  #-}
 
 
-chomp' :: ArrowApply p => p (i, Moore p i o) (Moore p i o)
+chomp' :: ArrowApply arr => arr (i, Moore arr i o) (Moore arr i o)
 chomp' = arr swap >>> chomp
   where
     swap (a, b) = (b, a)

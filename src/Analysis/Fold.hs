@@ -13,11 +13,11 @@
 module Analysis.Fold where
 
 import           Control.Arrow
+import           Data.Functor.Identity
 import Data.Profunctor hiding (curry')
 import Data.Profunctor.Traversing
 import Data.Monoid (Sum(..), Product(..))
 import           Analysis.MealyMoore
-import           Prelude                    hiding (id, (.))
 
 
 
@@ -73,6 +73,10 @@ over = ($)
 starry :: ((a -> f b) -> (s -> f t)) -> Optic (Star f) s t a b
 starry l (Star f) = Star (l f)
 {-# INLINE starry #-}
+
+
+star' :: Star Identity a b -> a -> b
+star' (Star f) = runIdentity . f
 
 
 -- cast a starry lens into a functional one
