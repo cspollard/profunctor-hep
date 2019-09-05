@@ -24,6 +24,9 @@ default-extensions:
 - GADTs
 - TypeOperators
 - TypeFamilies
+- TupleSections
+- ScopedTypeVariables
+- TypeApplications
 
 dependencies:
 - base >= 4.7 && < 5
@@ -36,6 +39,7 @@ dependencies:
 - hashable
 - deriving-compat
 - functor-combinators
+- deriving-compat
 - vector
 - foldl
 - free

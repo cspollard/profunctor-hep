@@ -6,6 +6,7 @@
 module Analysis.Union
   ( U1, inj1, prj1, run1, extract1
   , U2, inj2, prj2, run2, extract2
+  , (<<|)
   , Members
   , module X
   ) where
@@ -50,6 +51,11 @@ prj1 nat nat' = runU1 >>> ((runL1 >>> nat) <:| (U1 >>> nat'))
 prj2 :: (x a b -> c) -> (U2 xs a b -> c) -> U2 (x : xs) a b -> c
 prj2 nat nat' = runU2 >>> ((runL2 >>> nat) <:| (U2 >>> nat'))
 {-# INLINE prj2 #-}
+
+infixr 1 <<|
+(<<|) :: (x a b -> c) -> (U2 xs a b -> c) -> U2 (x : xs) a b -> c
+(<<|) = prj2
+{-# INLINE (<<|) #-}
 
 
 run1 :: (x ~> U1 xs) -> U1 (x : xs) ~> U1 xs

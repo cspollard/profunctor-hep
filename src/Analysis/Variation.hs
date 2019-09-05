@@ -20,11 +20,15 @@ type VarRel s = Star (Variation s)
 
 
 data Variation s a = Variation !a !(HM.MonoidalHashMap s (First a))
-  deriving (Functor, Foldable, Traversable)
+  deriving (Functor, Foldable, Traversable, Show)
 
 deriveShow1 ''First
 deriveShow1 ''HM.MonoidalHashMap
 deriveShow1 ''Variation
+
+
+vars :: (Eq s, Hashable s) => a -> [(s, a)] -> Variation s a
+vars n v = Variation n <<< HM.fromList $ fmap First <$> v
 
 
 instance (Eq s, Hashable s) => Applicative (Variation s) where

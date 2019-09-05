@@ -15,7 +15,7 @@ module Analysis.MealyMoore where
 import           Control.Arrow
 import           Control.Category
 import           Data.Functor.Identity
-import           Data.Profunctor
+import           Data.Profunctor hiding (curry')
 import           Prelude               hiding (id, (.))
 import Data.Foldable (foldlM)
 
@@ -24,7 +24,11 @@ newtype Mealy arr i o = Mealy { runMealy :: arr i (Moore arr i o) }
 
 -- TODO
 -- need to think about strictness
-data Moore arr i o = Moore !(Mealy arr i o) !o
+data Moore arr i o
+  = Moore
+  { update :: !(Mealy arr i o)
+  , output :: !o
+  }
 
 
 type Mealy' = Mealy (->)
@@ -116,19 +120,16 @@ simple f = m
 {-# INLINE simple #-}
 
 
-pop :: Moore arr i o -> Mealy arr i o
-pop (Moore m _) = m
-{-# INLINE pop  #-}
-
-
-poop :: Moore arr i o -> o
-poop (Moore _ o) = o
-{-# INLINE poop  #-}
-
-
 chomp :: ArrowApply arr => arr (Moore arr i o, i) (Moore arr i o)
-chomp = first (arr $ pop >>> runMealy) >>> app
+chomp = first (arr $ update >>> runMealy) >>> app
 {-# INLINE chomp  #-}
+
+
+chomp' :: ArrowApply p => p (i, Moore p i o) (Moore p i o)
+chomp' = arr swap >>> chomp
+  where
+    swap (a, b) = (b, a)
+{-# INLINE chomp'  #-}
 
 
 curry' :: Arrow arr => arr (i, i') o -> arr i (arr i' o)
@@ -139,7 +140,7 @@ curry' p = proc i -> do
 
 
 lower :: (Category arr, Strong arr) => Mealy arr i o -> arr i o
-lower (Mealy m) = m >>> arr' poop
+lower (Mealy m) = m >>> arr' output
 {-# INLINE lower  #-}
 
 
@@ -223,7 +224,9 @@ instance (Category arr, Strong arr) => Arrow (TmpA arr) where
 
 arr' :: (Category p, Strong p) => (a -> b) -> p a b
 arr' = runTmpA <<< arr
+{-# INLINE arr' #-}
 
 
 par' :: (Category p, Strong p) => p a b -> p c d -> p (a, c) (b, d)
 par' m m' = runTmpA $ TmpA m *** TmpA m'
+{-# INLINE par' #-}

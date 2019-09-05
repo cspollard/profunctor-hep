@@ -5,16 +5,19 @@
 {-# LANGUAGE PatternSynonyms  #-}
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE DeriveFunctor    #-}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveTraversable    #-}
 
 
 module Analysis.Fold where
 
 import           Control.Arrow
 import Data.Profunctor hiding (curry')
+import Data.Profunctor.Traversing
 import Data.Monoid (Sum(..), Product(..))
 import           Analysis.MealyMoore
 import           Prelude                    hiding (id, (.))
-import Control.Lens.At (ix)
 
 
 
@@ -52,61 +55,57 @@ multiplied = dimap Product getProduct $ monoidal
 type Optic p s t a b = p a b -> p s t
 type Optic' p s a = p a a -> p s s
 type OpticC c s t a b = forall p. c p => Optic p s t a b
+type OpticC' c s a = forall p. c p => Optic' p s a
 
 type Simple l s a = l s s a a
 type Lens s t a b = OpticC Strong s t a b
 type Lens' s a = Simple Lens s a
+type Traversal s t a b = OpticC Traversing s t a b
+type Traversal' s a = Simple Traversal s a
 
 
+over :: Optic p s t a b -> p a b -> p s t
+over = ($)
+{-# INLINE over  #-}
+
+
+-- view a star through a lens
 starry :: ((a -> f b) -> (s -> f t)) -> Optic (Star f) s t a b
 starry l (Star f) = Star (l f)
 {-# INLINE starry #-}
 
 
-moores
+-- cast a starry lens into a functional one
+hubble :: Optic (Star f) s t a b -> (a -> f b) -> s -> f t
+hubble o g = runStar (o (Star g))
+{-# INLINE hubble #-}
+
+
+layer
   :: (Strong p, ArrowApply p)
-  => (a -> Optic' p s (Moore p b w))
-    -- ^ instructions to access parts of a container given an index
+  => p i' (i, Optic' p s (Moore p i o))
+  -- ^ instructions to transform an index into container access and a new index
   -> s
-    -- ^ the container of accumulators
-  -> Moore p (a, b) s
-    -- ^ the total accumulator
-moores trav s = feedback' $ Moore (simple go) s
+  -- ^ the container of accumulators
+  -> Moore p i' s
+  -- ^ the total accumulator
+layer idx ms = Moore (feedback (simple go) ms) ms
   where
-    go = proc (ms', (a, w)) -> app -< (trav a (lmap (,w) chomp), ms')
-{-# INLINE moores #-}
+    go = proc (ms', i') -> do
+      (i, opt) <- idx -< i'
+      p <- curry' chomp' -< i
+      app -< (opt p, ms')
+{-# INLINE layer #-}
 
 
-mooresA
-  :: (Strong p, ArrowApply p)
-  => (a -> Optic' p s (Moore p b w))
-    -- ^ instructions to access parts of a container given an index
-  -> s
-    -- ^ the container of accumulators
-  -> Mealy p (a, b) s
-    -- ^ the total accumulator
-mooresA trav = pop <<< moores trav
-{-# INLINE mooresA #-}
-
-
--- histo
---   :: forall m a b. PrimMonad m
---   => V.MVector (PrimState m) (MooreK m a b)
---   -> MooreK m (Int, a) (V.MVector (PrimState m) (MooreK m a b))
--- histo = moores idx
---   where
---     idx :: Int -> Optic' (Star m) (V.MVector (PrimState m) x) x
---     idx i
---       | i >= 9 = starry $ \f v -> modifyM v f 9
---       | i <= 0 = starry $ \f v -> modifyM v f 0
---       | otherwise = starry $ \f v -> modifyM v f i
--- 
---     modifyM :: forall x. V.MVector (PrimState m) x -> (x -> m x) -> Int -> m (V.MVector (PrimState m) x)
---     modifyM v f i = (V.read v i >>= f >>= V.write v i) >> return v
-
-
-histoL
-  :: Monad m
-  => [MooreK m a b]
-  -> MooreK m (Int, a) [MooreK m a b]
-histoL ms = moores (\i -> starry (ix i)) ms
+-- | functorial version of layer
+layerF
+  :: (Strong p, ArrowApply p, Functor f)
+  => p i' (i, Optic' p (f (Moore p i o)) (Moore p i o))
+  -- ^ instructions to transform an index into container access and a new index
+  -> f (Moore p i o)
+  -- ^ the container of accumulators
+  -> Moore p i' (f o)
+  -- ^ the total accumulator
+layerF idx ms = fmap output <$> layer idx ms
+{-# INLINE layerF #-}

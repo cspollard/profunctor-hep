@@ -1,7 +1,8 @@
 module Analysis.Ana
-  ( U2, inj2, prj2, run2, extract2, Analysis, Ana
+  ( U2, inj2, prj2, run2, extract2, Analysis, Ana, (<<|)
   , liftAna, retractAna, runAna, traceAna, hoistAna, runAna', hoistAna'
   , Members
+  , (>>>), (<<<)
   , module X
   ) where
 
