@@ -13,7 +13,6 @@
 module Analysis.Fold where
 
 import           Control.Arrow
-import           Data.Functor.Identity
 import Data.Profunctor hiding (curry')
 import Data.Profunctor.Traversing
 import Data.Monoid (Sum(..), Product(..))
@@ -75,14 +74,11 @@ starry l (Star f) = Star (l f)
 {-# INLINE starry #-}
 
 
-star' :: Star Identity a b -> a -> b
-star' (Star f) = runIdentity . f
-
-
 -- cast a starry lens into a functional one
 hubble :: Optic (Star f) s t a b -> (a -> f b) -> s -> f t
 hubble o g = runStar (o (Star g))
 {-# INLINE hubble #-}
+
 
 
 layer

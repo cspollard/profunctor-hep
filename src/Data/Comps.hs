@@ -10,6 +10,7 @@ import Analysis.Fold
 import Data.Profunctor
 import Control.Lens.At
 
+
 data Comps (fs :: [* -> *]) a where
   Done :: !a -> Comps '[] a
   More :: !(f (Comps fs a)) -> Comps (f : fs) a
@@ -17,6 +18,7 @@ data Comps (fs :: [* -> *]) a where
 
 _Done :: OpticC Profunctor (Comps '[] a) (Comps '[] b) a b
 _Done = dimap (\(Done x) -> x) (\y -> Done y)
+
 
 _More :: OpticC Profunctor (Comps (f : fs) a) (Comps (f : fs) b) (f (Comps fs a)) (f (Comps fs b))
 _More = dimap (\(More fs) -> fs) (\fs -> More fs)
