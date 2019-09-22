@@ -1,7 +1,9 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Data.Both where
 
+import GHC.Generics
 import Data.Bitraversable
 import Data.Bifunctor
 import Data.Bifoldable
@@ -14,7 +16,7 @@ import Data.Profunctor.Optic
 import Data.Functor.Identity
 
 
-data Both a b = Both !a !b deriving Show
+data Both a b = Both !a !b deriving (Generic, Show)
 
 
 instance Bitraversable Both where
