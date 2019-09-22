@@ -15,7 +15,6 @@ import Control.Arrow
 import Data.Monoid (Sum(..), Product(..))
 import Data.Moore
 import Data.Profunctor.Optic
-import Data.Profunctor
 import Data.Both
 
 

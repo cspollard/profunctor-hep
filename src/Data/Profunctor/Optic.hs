@@ -1,14 +1,14 @@
 {-# LANGUAGE ConstraintKinds           #-}
 
 module Data.Profunctor.Optic
-  ( -- module X
-  Optic, Optic', OpticC, OpticC'
+  ( module X
+  , Optic, Optic', OpticC, OpticC'
   , Simple, Lens, Lens', Traversal, Traversal'
   , starry, hubble
   ) where
 
-import Data.Profunctor -- as X hiding (curry') 
-import Data.Profunctor.Traversing -- as X
+import Data.Profunctor as X hiding (curry') 
+import Data.Profunctor.Traversing as X
 
 type Optic p s t a b = p a b -> p s t
 type Optic' p s a = p a a -> p s s
