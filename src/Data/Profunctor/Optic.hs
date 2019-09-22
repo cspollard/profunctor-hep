@@ -4,11 +4,13 @@ module Data.Profunctor.Optic
   ( module X
   , Optic, Optic', OpticC, OpticC'
   , Simple, Lens, Lens', Traversal, Traversal'
-  , starry, hubble
+  , starry, hubble, view
   ) where
 
 import Data.Profunctor as X hiding (curry') 
 import Data.Profunctor.Traversing as X
+import Data.Functor.Const
+
 
 type Optic p s t a b = p a b -> p s t
 type Optic' p s a = p a a -> p s s
@@ -32,3 +34,8 @@ starry l (Star f) = Star (l f)
 hubble :: Optic (Star f) s t a b -> (a -> f b) -> s -> f t
 hubble o g = runStar (o (Star g))
 {-# INLINE hubble #-}
+
+
+view :: Optic' (Star (Const a)) s a -> s -> a
+view p = getConst . runStar (p (Star $ \a -> Const a))
+{-# INLINE view #-}
