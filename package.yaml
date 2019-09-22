@@ -48,7 +48,9 @@ dependencies:
 
 library:
   source-dirs: src
-  ghc-options: -Wall
+  ghc-options:
+  - -Wall
+  - -O2
 
 executables:
   profunctor-hep-exe:

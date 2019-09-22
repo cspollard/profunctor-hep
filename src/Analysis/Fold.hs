@@ -49,66 +49,64 @@ multiplied = dimap Product getProduct $ monoidal
 {-# INLINE multiplied #-}
 
 
+layer
+  :: (Strong p, ArrowApply p)
+  => p i' (i, Optic' p s (Moore p i x))
+  -- ^ instructions to transform an index into container access and a new index
+  -> s
+  -- ^ the container of accumulators
+  -> Moore p i' s
+  -- ^ the total accumulator
+layer idx ms = feedback $ liftMoore ms go
+  where
+    go = proc (ms', i') -> do
+      (i, opt) <- idx -< i'
+      p <- chomps' -< i
+      app -< (opt p, ms')
+{-# INLINE layer #-}
 
 
--- layer
---   :: (Strong p, ArrowApply p)
---   => p i' (i, Optic' p s (Moore p i x))
---   -- ^ instructions to transform an index into container access and a new index
---   -> s
---   -- ^ the container of accumulators
---   -> Moore p i' s
---   -- ^ the total accumulator
--- layer idx ms = feedback $ liftMoore ms go
---   where
---     go = proc (ms', i') -> do
---       (i, opt) <- idx -< i'
---       p <- chomps' -< i
---       app -< (opt p, ms')
--- {-# INLINE layer #-}
--- 
--- 
--- -- | functorial version of layer
--- layerF
---   :: (Mapping p, ArrowApply p, Functor f)
---   => p i' (i, Optic' p (f (Moore p i o)) (Moore p i o))
---   -- ^ instructions to transform an index into container access and a new index
---   -> f (Moore p i o)
---   -- ^ the container of accumulators
---   -> Moore p i' (f o)
---   -- ^ the total accumulator
--- layerF idx ms = postmap (map' extract) $ layer idx ms
--- {-# INLINE layerF #-}
+-- | functorial version of layer
+layerF
+  :: (Mapping p, ArrowApply p, Functor f)
+  => p i' (i, Optic' p (f (Moore p i o)) (Moore p i o))
+  -- ^ instructions to transform an index into container access and a new index
+  -> f (Moore p i o)
+  -- ^ the container of accumulators
+  -> Moore p i' (f o)
+  -- ^ the total accumulator
+layerF idx ms = postmap (map' extract) $ layer idx ms
+{-# INLINE layerF #-}
 
 
--- layerEither
---   :: (Strong p, ArrowChoice p, ArrowApply p)
---   => Both (Moore p a c) (Moore p b d)
---   -> Moore p (Either a b) (Both c d)
--- layerEither both = postmap go $ layerEither' both
---   where
---     go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
--- {-# INLINE layerEither' #-}
--- 
--- 
--- layerEither'
---   :: (Strong p, ArrowChoice p, ArrowApply p)
---   => Both (Moore p a c) (Moore p b d)
---   -> Moore p (Either a b) (Both (Moore p a c) (Moore p b d))
--- layerEither' both = feedback $ liftMoore both go
---   where
---     l' = proc l -> do
---       a <- app -< (chomps', l)
---       returnA -< _1 a
--- 
---     r' = proc r -> do
---       a <- app -< (chomps', r)
---       returnA -< _2 a
--- 
---     go = proc (m, i) -> do
---       a <- l' ||| r' -< i
---       app -< (a, m)
--- {-# INLINE layerEither #-}
+layerEither
+  :: (Strong p, ArrowChoice p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Either a b) (Both c d)
+layerEither both = postmap go $ layerEither' both
+  where
+    go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
+{-# INLINE layerEither' #-}
+
+
+layerEither'
+  :: (Strong p, ArrowChoice p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Either a b) (Both (Moore p a c) (Moore p b d))
+layerEither' both = feedback $ liftMoore both go
+  where
+    l' = proc l -> do
+      a <- app -< (chomps', l)
+      returnA -< _1 a
+
+    r' = proc r -> do
+      a <- app -< (chomps', r)
+      returnA -< _2 a
+
+    go = proc (m, i) -> do
+      a <- l' ||| r' -< i
+      app -< (a, m)
+{-# INLINE layerEither #-}
 
 
 layerBoth'
@@ -125,9 +123,11 @@ layerBoth' both = feedback $ liftMoore both go
 {-# INLINE layerBoth' #-}
 
 
--- layerBoth
---   :: (Strong p, ArrowApply p)
---   => Both (Moore p a c) (Moore p b d)
---   -> Moore p (Both a b) (Both c d)
--- layerBoth both = postmap go $ layerBoth' both
--- {-# INLINE layerBoth #-}
+layerBoth
+  :: (Strong p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Both a b) (Both c d)
+layerBoth both = postmap go $ layerBoth' both
+  where
+    go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
+{-# INLINE layerBoth #-}
