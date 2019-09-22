@@ -19,19 +19,37 @@ data Both a b = Both !a !b deriving Show
 
 instance Bitraversable Both where
   bitraverse f g (Both a b) = Both <$> f a <*> g b
+  {-# INLINE bitraverse  #-}
 
 instance Bifunctor Both where
   bimap = bimapDefault
+  {-# INLINE bimap  #-}
 
 instance Bifoldable Both where
   bifoldMap = bifoldMapDefault
+  {-# INLINE bifoldMap  #-}
 
 instance Biapplicative Both where
   bipure = Both 
+  {-# INLINE bipure  #-}
   Both f g <<*>> Both a b = Both (f a) (g b)
+  {-# INLINE (<<*>>)  #-}
+
 
 instance Functor (Both a) where
   fmap = second
+  {-# INLINE fmap  #-}
+
+instance Monoid s => Applicative (Both s) where
+  pure = Both mempty
+  {-# INLINE pure  #-}
+
+  Both s f <*> Both t x = Both (s <> t) (f x)
+  {-# INLINE (<*>)  #-}
+
+instance Monoid s => Monad (Both s) where
+  Both s a >>= f = let Both t b = f a in Both (s <> t) b
+  {-# INLINE (>>=)  #-}
 
 
 toTuple :: Both a b -> (a, b)
