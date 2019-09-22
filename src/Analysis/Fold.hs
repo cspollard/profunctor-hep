@@ -17,12 +17,11 @@ import Data.Profunctor hiding (curry')
 import Data.Moore
 import Data.Profunctor.Optic
 import Data.Both
-import Data.Bifunctor
 
 
 
 accum :: Semigroup m => m -> Moore' m m
-accum m = feedback $ simple m (uncurry (<>))
+accum m = feedback $ liftMoore m (uncurry (<>))
 {-# INLINE accum #-}
 
 
@@ -32,7 +31,7 @@ monoidal = accum mempty
 
 
 counter :: Enum b => b -> Moore' a b
-counter b = feedback $ simple b (fst >>> succ)
+counter b = feedback $ liftMoore b (fst >>> succ)
 {-# INLINE counter  #-}
 
 
@@ -61,7 +60,7 @@ layer
   -- ^ the container of accumulators
   -> Moore p i' s
   -- ^ the total accumulator
-layer idx ms = feedback $ simple ms go
+layer idx ms = feedback $ liftMoore ms go
   where
     go = proc (ms', i') -> do
       (i, opt) <- idx -< i'
@@ -70,17 +69,16 @@ layer idx ms = feedback $ simple ms go
 {-# INLINE layer #-}
 
 
-
 -- | functorial version of layer
 layerF
-  :: (Strong p, ArrowApply p, Functor f)
+  :: (Mapping p, ArrowApply p, Functor f)
   => p i' (i, Optic' p (f (Moore p i o)) (Moore p i o))
   -- ^ instructions to transform an index into container access and a new index
   -> f (Moore p i o)
   -- ^ the container of accumulators
   -> Moore p i' (f o)
   -- ^ the total accumulator
-layerF idx ms = fmap current <$> layer idx ms
+layerF idx ms = postmap (map' extract) $ layer idx ms
 {-# INLINE layerF #-}
 
 
@@ -88,7 +86,7 @@ layerEither
   :: (Strong p, ArrowChoice p, ArrowApply p)
   => Both (Moore p a c) (Moore p b d)
   -> Moore p (Either a b) (Both (Moore p a c) (Moore p b d))
-layerEither both = feedback $ simple both go
+layerEither both = feedback $ liftMoore both go
   where
     l' = proc l -> do
       a <- app -< (chomps', l)
@@ -108,7 +106,7 @@ layerBoth
   :: (Strong p, ArrowApply p)
   => Both (Moore p a c) (Moore p b d)
   -> Moore p (Both a b) (Both (Moore p a c) (Moore p b d))
-layerBoth both = feedback $ simple both go
+layerBoth both = feedback $ liftMoore both go
   where
     go = arr transp >>> (chomp *** chomp) >>> arr (uncurry Both)
     transp (Both x y, Both z w) = ((x, z), (y, w))
