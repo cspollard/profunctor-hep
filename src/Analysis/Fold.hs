@@ -1,5 +1,4 @@
 {-# LANGUAGE Arrows           #-}
-{-# LANGUAGE ConstraintKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms  #-}
@@ -12,17 +11,19 @@
 
 module Analysis.Fold where
 
-import           Control.Arrow
-import Data.Profunctor hiding (curry')
-import Data.Profunctor.Traversing
+import Control.Arrow
 import Data.Monoid (Sum(..), Product(..))
-import           Analysis.MealyMoore
+import Data.Profunctor hiding (curry')
+import Data.Moore
+import Data.Profunctor.Optic
+import Data.Both
+import Data.Bifunctor
 
 
 
 accum :: Semigroup m => m -> Moore' m m
-accum m = feedback' $ Moore (arr $ uncurry (<>)) m
-{-# INLINE accum  #-}
+accum m = feedback $ simple m (uncurry (<>))
+{-# INLINE accum #-}
 
 
 monoidal :: Monoid m => Moore' m m
@@ -31,7 +32,7 @@ monoidal = accum mempty
 
 
 counter :: Enum b => b -> Moore' a b
-counter b = feedback' $ Moore (arr $ fst >>> succ) b
+counter b = feedback $ simple b (fst >>> succ)
 {-# INLINE counter  #-}
 
 
@@ -51,51 +52,23 @@ multiplied = dimap Product getProduct $ monoidal
 
 
 
-type Optic p s t a b = p a b -> p s t
-type Optic' p s a = p a a -> p s s
-type OpticC c s t a b = forall p. c p => Optic p s t a b
-type OpticC' c s a = forall p. c p => Optic' p s a
-
-type Simple l s a = l s s a a
-type Lens s t a b = OpticC Strong s t a b
-type Lens' s a = Simple Lens s a
-type Traversal s t a b = OpticC Traversing s t a b
-type Traversal' s a = Simple Traversal s a
-
-
-over :: Optic p s t a b -> p a b -> p s t
-over = ($)
-{-# INLINE over  #-}
-
-
--- view a star through a lens
-starry :: ((a -> f b) -> (s -> f t)) -> Optic (Star f) s t a b
-starry l (Star f) = Star (l f)
-{-# INLINE starry #-}
-
-
--- cast a starry lens into a functional one
-hubble :: Optic (Star f) s t a b -> (a -> f b) -> s -> f t
-hubble o g = runStar (o (Star g))
-{-# INLINE hubble #-}
-
-
 
 layer
   :: (Strong p, ArrowApply p)
-  => p i' (i, Optic' p s (Moore p i o))
+  => p i' (i, Optic' p s (Moore p i x))
   -- ^ instructions to transform an index into container access and a new index
   -> s
   -- ^ the container of accumulators
   -> Moore p i' s
   -- ^ the total accumulator
-layer idx ms = Moore (feedback (simple go) ms) ms
+layer idx ms = feedback $ simple ms go
   where
     go = proc (ms', i') -> do
       (i, opt) <- idx -< i'
-      p <- curry' chomp' -< i
+      p <- chomps' -< i
       app -< (opt p, ms')
 {-# INLINE layer #-}
+
 
 
 -- | functorial version of layer
@@ -107,5 +80,36 @@ layerF
   -- ^ the container of accumulators
   -> Moore p i' (f o)
   -- ^ the total accumulator
-layerF idx ms = fmap output <$> layer idx ms
+layerF idx ms = fmap current <$> layer idx ms
 {-# INLINE layerF #-}
+
+
+layerEither
+  :: (Strong p, ArrowChoice p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Either a b) (Both (Moore p a c) (Moore p b d))
+layerEither both = feedback $ simple both go
+  where
+    l' = proc l -> do
+      a <- app -< (chomps', l)
+      returnA -< _1 a
+
+    r' = proc r -> do
+      a <- app -< (chomps', r)
+      returnA -< _2 a
+
+    go = proc (m, i) -> do
+      a <- l' ||| r' -< i
+      app -< (a, m)
+{-# INLINE layerEither #-}
+
+
+layerBoth
+  :: (Strong p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Both a b) (Both (Moore p a c) (Moore p b d))
+layerBoth both = feedback $ simple both go
+  where
+    go = arr transp >>> (chomp *** chomp) >>> arr (uncurry Both)
+    transp (Both x y, Both z w) = ((x, z), (y, w))
+{-# INLINE layerBoth #-}

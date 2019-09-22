@@ -8,6 +8,7 @@ module Data.Comps where
 import Data.Functor.Classes
 import Analysis.Fold
 import Data.Profunctor
+import Data.Profunctor.Optic
 import Control.Lens.At
 
 
@@ -22,6 +23,11 @@ _Done = dimap (\(Done x) -> x) (\y -> Done y)
 
 _More :: OpticC Profunctor (Comps (f : fs) a) (Comps (f : fs) b) (f (Comps fs a)) (f (Comps fs b))
 _More = dimap (\(More fs) -> fs) (\fs -> More fs)
+
+
+liftComps :: Functor f => f a -> Comps '[f] a
+liftComps xs = More $ Done <$> xs
+
 
 
 instance Show1 (Comps '[]) where
@@ -61,6 +67,15 @@ instance (Traversable (Comps fs), Traversable f) => Traversable (Comps (f : fs))
   traverse g (More fs) = More <$> traverse (traverse g) fs
 
 
+instance Applicative (Comps '[]) where
+  pure = Done 
+  Done f <*> Done x = Done (f x)
+
+instance (Applicative (Comps fs), Applicative f) => Applicative (Comps (f : fs)) where
+  pure x = More $ pure (pure x)
+  More ffs <*> More fxs = More ((<*>) <$> ffs <*> fxs)
+
+
 
 infixr 3 :.
 data a :. b = a :. b
@@ -78,6 +93,8 @@ instance Ixed (Comps '[] a) where
 instance (IxValue (f (Comps fs a)) ~ Comps fs a, Ixed (f (Comps fs a)), Ixed (Comps fs a))
   => Ixed (Comps (f : fs) a) where
   ix (i :. is) = hubble _More . ix i . ix is
+
+
 
 ix' :: (Ixed m, Applicative f) => Index m -> Optic' (Star f) m (IxValue m)
 ix' = starry . ix

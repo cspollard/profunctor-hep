@@ -61,7 +61,6 @@ instance Choice arr => Choice (Mealy arr) where
 
       go (Left (Moore m' o)) = Moore (left' m') (Left o)
       go (Right c) = Moore meal (Right c)
-
   {-# INLINE left'  #-}
 
 
@@ -130,6 +129,17 @@ chomp' = arr swap >>> chomp
   where
     swap (a, b) = (b, a)
 {-# INLINE chomp'  #-}
+
+
+chomps :: ArrowApply arr => arr (Moore arr i o) (arr i (Moore arr i o))
+chomps = curry' chomp
+{-# INLINE chomps  #-}
+
+
+chomps' :: ArrowApply arr => arr i (arr (Moore arr i o)  (Moore arr i o))
+chomps' = curry' chomp'
+{-# INLINE chomps'  #-}
+
 
 
 curry' :: Arrow arr => arr (i, i') o -> arr i (arr i' o)
