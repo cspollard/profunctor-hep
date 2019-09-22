@@ -5,8 +5,8 @@
 
 module Data.Comps where
 
+
 import Data.Functor.Classes
-import Analysis.Fold
 import Data.Profunctor
 import Data.Profunctor.Optic
 import Control.Lens.At

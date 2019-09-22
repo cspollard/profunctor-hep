@@ -52,9 +52,9 @@ postmap m (Moore x p f) = Moore x (rmap (postmap m) p) (f >>> m)
 
 forceMoore :: ArrowApply p => p (Moore p i o) (Moore p i o)
 forceMoore = proc m -> do
-  Moore x p f <- id -< m
-  o <- app -< (f, x)
-  returnA -< Moore o p id
+  o <- extract -< m
+  returnA -< Moore o (update m) id
+
 
 type Moore' = Moore (->)
 type MooreK m = Moore (Star m)
@@ -167,11 +167,14 @@ instance (Category p, Strong p) => Applicative (Moore p i) where
     hoistMoore runTmpA $ Moore (Both xg xu) (go pg pu) (go' fg fu)
 
     where
+      -- ghc panics without the following two type signatures.
+      go :: p i (Moore p i (a -> b)) -> p i (Moore p i a) -> TmpA p i (Moore (TmpA p) i b)
       go qg qu = proc i -> do
         Moore xg' qg' fg' <- TmpA qg -< i
         Moore xu' qu' fu' <- TmpA qu -< i
         returnA -< Moore (Both xg' xu') (go qg' qu') (go' fg' fu')
 
+      go' :: p x (a -> b) -> p x' a -> TmpA p (Both x x') b
       go' fg' fu' = proc (Both xg' xu') -> do
         g <- TmpA fg' -< xg'
         u <- TmpA fu' -< xu'

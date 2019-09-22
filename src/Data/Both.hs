@@ -34,6 +34,13 @@ instance Functor (Both a) where
   fmap = second
 
 
+toTuple :: Both a b -> (a, b)
+toTuple (Both a b) = (a, b)
+
+fromTuple :: (a, b) -> Both a b
+fromTuple (a, b) = Both a b
+
+
 _1 :: Lens' (Both a b) a
 _1 f = dimap (\(Both a b) -> (a, b)) (\(a, b) -> Both a b) $ first' f 
 

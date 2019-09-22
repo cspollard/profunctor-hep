@@ -85,8 +85,18 @@ layerF idx ms = postmap (map' extract) $ layer idx ms
 layerEither
   :: (Strong p, ArrowChoice p, ArrowApply p)
   => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Either a b) (Both c d)
+layerEither both = postmap go $ layerEither' both
+  where
+    go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
+{-# INLINE layerEither' #-}
+
+
+layerEither'
+  :: (Strong p, ArrowChoice p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
   -> Moore p (Either a b) (Both (Moore p a c) (Moore p b d))
-layerEither both = feedback $ liftMoore both go
+layerEither' both = feedback $ liftMoore both go
   where
     l' = proc l -> do
       a <- app -< (chomps', l)
@@ -102,12 +112,22 @@ layerEither both = feedback $ liftMoore both go
 {-# INLINE layerEither #-}
 
 
-layerBoth
+layerBoth'
   :: (Strong p, ArrowApply p)
   => Both (Moore p a c) (Moore p b d)
   -> Moore p (Both a b) (Both (Moore p a c) (Moore p b d))
-layerBoth both = feedback $ liftMoore both go
+layerBoth' both = feedback $ liftMoore both go
   where
     go = arr transp >>> (chomp *** chomp) >>> arr (uncurry Both)
     transp (Both x y, Both z w) = ((x, z), (y, w))
+{-# INLINE layerBoth' #-}
+
+
+layerBoth
+  :: (Strong p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Both a b) (Both c d)
+layerBoth both = postmap go $ layerBoth' both
+  where
+    go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
 {-# INLINE layerBoth #-}
