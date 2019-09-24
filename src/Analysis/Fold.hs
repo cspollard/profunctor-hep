@@ -12,6 +12,7 @@
 module Analysis.Fold where
 
 import Control.Arrow
+import Control.Applicative (liftA2)
 import Data.Monoid (Sum(..), Product(..))
 import Data.Moore
 import Data.Profunctor.Optic
@@ -79,6 +80,11 @@ layerF idx ms = postmap (map' extract) $ layer idx ms
 {-# INLINE layerF #-}
 
 
+apply :: Applicative f => f (Moore' i o) -> Moore' (f i) (f o)                                                                 
+apply ms = (fmap.fmap) extract . feedback $ liftMoore ms (uncurry $ liftA2 chomps)                                                          
+{-# INLINE apply #-}
+
+
 layerEither
   :: (Strong p, ArrowChoice p, ArrowApply p)
   => Both (Moore p a c) (Moore p b d)
@@ -131,3 +137,5 @@ layerBoth both = postmap go $ layerBoth' both
   where
     go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
 {-# INLINE layerBoth #-}
+
+
