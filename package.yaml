@@ -38,12 +38,7 @@ dependencies:
 - monoidal-containers
 - hashable
 - deriving-compat
-- functor-combinators
-- deriving-compat
 - vector
-- foldl
-- free
-- kan-extensions
 - tagged
 
 library:
