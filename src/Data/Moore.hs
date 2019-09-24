@@ -13,16 +13,19 @@ module Data.Moore
   , hoistMoore
   , liftMoore, generalize, simplify
   , feedback, foldlMoore, foldlMooreK
-  , TmpA(..)
+  , apply, layer, layerF, layerEither, layerBoth
+  , WrapA(..)
   ) where
 
 
 import Prelude hiding (id, (.))
 import Data.Foldable (foldlM)
 import Data.Profunctor hiding (curry')
+import Data.Profunctor.Optic
 import Data.Functor.Identity
 import Control.Category
 import Control.Arrow
+import Control.Applicative (liftA2)
 import Data.Both
 
 
@@ -116,17 +119,17 @@ feedback
   :: forall p i o.
      (Category p, Strong p)
   => Moore p (o, i) o -> Moore p i o
-feedback (Moore x p f) = hoistMoore runTmpA $ Moore x (go x p f) (TmpA f)
+feedback (Moore x p f) = hoistMoore runWrapA $ Moore x (go x p f) (WrapA f)
   where
     go
       :: x
       -> (p (o, i) (Moore p (o, i) o))
       -> p x o
-      -> (TmpA p) i (Moore (TmpA p) i o)
+      -> (WrapA p) i (Moore (WrapA p) i o)
     go x' p' f' = proc i' -> do
-      o' <- TmpA f' -< x'
-      Moore x'' p'' f'' <- TmpA p' -< (o', i')
-      returnA -< Moore x'' (go x'' p'' f'') (TmpA f'')
+      o' <- WrapA f' -< x'
+      Moore x'' p'' f'' <- WrapA p' -< (o', i')
+      returnA -< Moore x'' (go x'' p'' f'') (WrapA f'')
 {-# INLINE feedback #-}
 
 
@@ -147,6 +150,94 @@ foldlMooreK m@(Moore x _ f) = Moore x (rmap foldlMooreK go) f
 {-# INLINE foldlMooreK  #-}
 
 
+apply :: Applicative f => f (Moore' i o) -> Moore' (f i) (f o)                                                                 
+apply ms = (fmap.fmap) extract . feedback $ liftMoore ms (uncurry $ liftA2 chomps)                                                          
+{-# INLINE apply #-}
+
+
+layer
+  :: (Strong p, ArrowApply p)
+  => p i' (i, Optic' p s (Moore p i x))
+  -- ^ instructions to transform an index into container access and a new index
+  -> s
+  -- ^ the container of accumulators
+  -> Moore p i' s
+  -- ^ the total accumulator
+layer idx ms = feedback $ liftMoore ms go
+  where
+    go = proc (ms', i') -> do
+      (i, opt) <- idx -< i'
+      p <- chomps' -< i
+      app -< (opt p, ms')
+{-# INLINE layer #-}
+
+
+-- | functorial version of layer
+layerF
+  :: (Mapping p, ArrowApply p, Functor f)
+  => p i' (i, Optic' p (f (Moore p i o)) (Moore p i o))
+  -- ^ instructions to transform an index into container access and a new index
+  -> f (Moore p i o)
+  -- ^ the container of accumulators
+  -> Moore p i' (f o)
+  -- ^ the total accumulator
+layerF idx ms = postmap (map' extract) $ layer idx ms
+{-# INLINE layerF #-}
+
+
+layerEither
+  :: (Strong p, ArrowChoice p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Either a b) (Both c d)
+layerEither both = postmap go $ layerEither' both
+  where
+    go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
+{-# INLINE layerEither #-}
+
+
+layerEither'
+  :: (Strong p, ArrowChoice p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Either a b) (Both (Moore p a c) (Moore p b d))
+layerEither' both = feedback $ liftMoore both go
+  where
+    l' = proc l -> do
+      a <- app -< (chomps', l)
+      returnA -< _1 a
+
+    r' = proc r -> do
+      a <- app -< (chomps', r)
+      returnA -< _2 a
+
+    go = proc (m, i) -> do
+      a <- l' ||| r' -< i
+      app -< (a, m)
+{-# INLINE layerEither' #-}
+
+
+layerBoth'
+  :: forall p a b c d. (Strong p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Both a b) (Both (Moore p a c) (Moore p b d))
+layerBoth' both = feedback $ liftMoore both go
+  where
+    go :: p (Both (Moore p a c) (Moore p b d), Both a b) (Both (Moore p a c) (Moore p b d))
+    go = arr transp >>> (chomp *** chomp) >>> arr (uncurry Both)
+
+    transp :: (Both (Moore p a c) (Moore p b d), Both a b) -> ((Moore p a c, a), (Moore p b d, b))
+    transp (Both x y, Both z w) = ((x, z), (y, w))
+{-# INLINE layerBoth' #-}
+
+
+layerBoth
+  :: (Strong p, ArrowApply p)
+  => Both (Moore p a c) (Moore p b d)
+  -> Moore p (Both a b) (Both c d)
+layerBoth both = postmap go $ layerBoth' both
+  where
+    go = arr toTuple >>> (extract *** extract) >>> arr fromTuple 
+{-# INLINE layerBoth #-}
+
 
 
 instance Profunctor p => Profunctor (Moore p) where
@@ -164,42 +255,42 @@ instance (Category p, Strong p) => Applicative (Moore p i) where
   {-# INLINE pure #-}
 
   Moore xg pg fg <*> Moore xu pu fu =
-    hoistMoore runTmpA $ Moore (Both xg xu) (go pg pu) (go' fg fu)
+    hoistMoore runWrapA $ Moore (Both xg xu) (go pg pu) (go' fg fu)
 
     where
       -- ghc panics without the following two type signatures.
-      go :: p i (Moore p i (a -> b)) -> p i (Moore p i a) -> TmpA p i (Moore (TmpA p) i b)
+      go :: p i (Moore p i (a -> b)) -> p i (Moore p i a) -> WrapA p i (Moore (WrapA p) i b)
       go qg qu = proc i -> do
-        Moore xg' qg' fg' <- TmpA qg -< i
-        Moore xu' qu' fu' <- TmpA qu -< i
+        Moore xg' qg' fg' <- WrapA qg -< i
+        Moore xu' qu' fu' <- WrapA qu -< i
         returnA -< Moore (Both xg' xu') (go qg' qu') (go' fg' fu')
 
-      go' :: p x (a -> b) -> p x' a -> TmpA p (Both x x') b
+      go' :: p x (a -> b) -> p x' a -> WrapA p (Both x x') b
       go' fg' fu' = proc (Both xg' xu') -> do
-        g <- TmpA fg' -< xg'
-        u <- TmpA fu' -< xu'
+        g <- WrapA fg' -< xg'
+        u <- WrapA fu' -< xu'
         returnA -< g u
   {-# INLINE (<*>) #-}
 
 
 
 -- every strong category is an arrow
-newtype TmpA p a b = TmpA { runTmpA :: p a b }
+newtype WrapA p a b = WrapA { runWrapA :: p a b }
   deriving (Category, Profunctor, Strong) via p
 
 
-instance (Category p, Strong p) => Arrow (TmpA p) where
+instance (Category p, Strong p) => Arrow (WrapA p) where
   arr f = rmap f id
   m *** m' = first' m <<< second' m'
 
 
 arr' :: (Category p, Strong p) => (a -> b) -> p a b
-arr' = runTmpA <<< arr
+arr' = runWrapA <<< arr
 {-# INLINE arr' #-}
 
 
 par' :: (Category p, Strong p) => p a b -> p c d -> p (a, c) (b, d)
-par' m m' = runTmpA $ TmpA m *** TmpA m'
+par' m m' = runWrapA $ WrapA m *** WrapA m'
 {-# INLINE par' #-}
 
 
