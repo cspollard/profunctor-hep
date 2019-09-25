@@ -92,3 +92,35 @@ true f = dimap (\(TF a b) -> (a, b)) (\(a, b) -> TF a b) $ first' f
 
 false :: Lens' (TF a) a
 false f = dimap (\(TF a b) -> (a, b)) (\(a, b) -> TF a b) $ second' f 
+
+
+data Either' a b
+  = Left' !a
+  | Right' !b
+
+instance Bitraversable Either' where
+  bitraverse f _ (Left' a) = Left' <$> f a
+  bitraverse _ g (Right' b) = Right' <$> g b
+  {-# INLINE bitraverse #-}
+
+instance Bifunctor Either' where
+  bimap = bimapDefault
+  {-# INLINE bimap #-}
+
+instance Bifoldable Either' where
+  bifoldMap = bifoldMapDefault
+  {-# INLINE bifoldMap #-}
+
+lazyEither :: Either' a b -> Either a b
+lazyEither (Left' a) = Left a
+lazyEither (Right' b) = Right b
+
+strictEither :: Either a b -> Either' a b
+strictEither (Left a) = Left' a
+strictEither (Right b) = Right' b
+
+-- _Left' :: Prism (Either a b) (Either a' b') a a'
+-- _Left' = rmap strictEither . right'
+
+-- _Right' :: Prism (Either a b) (Either a' b') b b'
+-- _Right' = dimap lazyEither strictEither . left'

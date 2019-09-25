@@ -3,7 +3,7 @@
 module Data.Profunctor.Optic
   ( module X
   , Optic, Optic', OpticC, OpticC'
-  , Simple, Lens, Lens', Traversal, Traversal'
+  , Simple, Iso, Iso', Lens, Lens', Prism, Prism', Traversal, Traversal'
   , starry, hubble, view, views
   ) where
 
@@ -18,8 +18,16 @@ type OpticC c s t a b = forall p. c p => Optic p s t a b
 type OpticC' c s a = forall p. c p => Optic' p s a
 
 type Simple l s a = l s s a a
+
+type Iso s t a b = OpticC Profunctor s t a b
+type Iso' s a = Simple Iso s a
+
 type Lens s t a b = OpticC Strong s t a b
 type Lens' s a = Simple Lens s a
+
+type Prism s t a b = OpticC Choice s t a b
+type Prism' s a = Simple Prism s a
+
 type Traversal s t a b = OpticC Traversing s t a b
 type Traversal' s a = Simple Traversal s a
 

@@ -240,6 +240,14 @@ layerBoth both = postmap go $ layerBoth' both
 
 
 
+instance (Category p, Strong p, Semigroup o) => Semigroup (Moore p i o) where
+  (<>) = liftA2 (<>)
+
+
+instance (Category p, Strong p, Monoid o) => Monoid (Moore p i o) where
+  mempty = pure mempty
+
+
 instance Profunctor p => Profunctor (Moore p) where
   dimap g h (Moore x p f) = Moore x (dimap g (dimap g h) p) (rmap h f)
   {-# INLINE dimap #-}
