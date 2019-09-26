@@ -44,19 +44,23 @@ extract :: ArrowApply p => p (Moore p i o) o
 extract = proc m -> do
   Moore x _ f <- id -< m
   app -< (f, x)
+{-# INLINE extract #-}
 
 
 premap :: (Profunctor p, Category p) => p i' i -> Moore p i o -> Moore p i' o
 premap m (Moore x p f) = Moore x (m >>> rmap (premap m) p) f
+{-# INLINE premap #-}
 
 postmap :: (Profunctor p, Category p) => p o o' -> Moore p i o -> Moore p i o'
 postmap m (Moore x p f) = Moore x (rmap (postmap m) p) (f >>> m)
+{-# INLINE postmap #-}
 
 
 forceMoore :: ArrowApply p => p (Moore p i o) (Moore p i o)
 forceMoore = proc m -> do
   o <- extract -< m
   returnA -< Moore o (update m) id
+{-# INLINE forceMoore #-}
 
 
 type Moore' = Moore (->)
@@ -72,17 +76,17 @@ chomp' :: ArrowApply p => p (i, Moore p i o) (Moore p i o)
 chomp' = arr swap >>> chomp
   where
     swap (a, b) = (b, a)
-{-# INLINE chomp'  #-}
+{-# INLINE chomp' #-}
 
 
 chomps :: ArrowApply p => p (Moore p i o) (p i (Moore p i o))
 chomps = curry' chomp
-{-# INLINE chomps  #-}
+{-# INLINE chomps #-}
 
 
 chomps' :: ArrowApply p => p i (p (Moore p i o)  (Moore p i o))
 chomps' = curry' chomp'
-{-# INLINE chomps'  #-}
+{-# INLINE chomps' #-}
 
 
 curry' :: Arrow p => p (i, i') o -> p i (p i' o)
@@ -147,7 +151,7 @@ foldlMooreK :: (Foldable f, Monad m) => MooreK m a b -> MooreK m (f a) b
 foldlMooreK m@(Moore x _ f) = Moore x (rmap foldlMooreK go) f
   where
     go = foldlK (Star $ \(i, j) -> runStar (update i) j) <<< arr (m,)
-{-# INLINE foldlMooreK  #-}
+{-# INLINE foldlMooreK #-}
 
 
 apply :: Applicative f => f (Moore' i o) -> Moore' (f i) (f o)                                                                 
